@@ -1,0 +1,71 @@
+\pdfoutput=1
+\documentclass[11pt]{article}
+
+% Final version generation
+% \usepackage[review]{acl}
+\usepackage[]{acl}
+
+% Standard package includes
+\usepackage{times}
+\usepackage{latexsym}
+
+% Latin characters
+\usepackage[T1]{fontenc}
+
+% UTF8 Encoding 
+\usepackage[utf8]{inputenc}
+
+% Space saver
+\usepackage{microtype}
+
+\title{
+% NLP Project Proposal — Fall 2021 \\
+Language Model, RoBERTa and T5 implementations \\ for Detection of Propaganda Techniques in News Articles.
+}
+
+\author{
+Antoine Basseto,
+Giacomo Camposampierro 
+\and Andrea Pinto \\         
+ETH Zurich - Swiss Federal Institute of Technology \\ \texttt{\{abasseto, gcamposampie, pintoa\}@ethz.ch}
+}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+The proliferation of online misinformation has led to a significant amount of research into the automatic detection of fake news.
+However, most efforts have focused on verifying the factual correctness of a piece of information, and little attention has been paid to the propaganda techniques used by malicious actors to spread their message.
+
+In this context, \textit{Task 11 of SemEval-2020}\footnote{The official task webpage: \url{https://propaganda.qcri.org/semeval2020-task11/}} aims to fill this gap.
+This shared task provides a well-annoted dataset of new articles enabling us to develop propaganda detection models.
+The focus of the task is broken down into two well-defined sub-tasks, namely \textit{1—Span identification (SI)} for detecting the propaganda text fragments in the news articles and \textit{2—technique classification TC} for detecting the type of propaganda used in a given text span.
+
+\section{Objectives and Goals}
+The objective of this Natural Language Processing project would be to develop three model architectures for these two sub tasks and provide an error analysis for these models.
+Namely, we would like to implement a basic Language Model, RoBERTa\footnote{RoBERTa paper and code: \url{https://huggingface.co/roberta-base}} — a state-of-the-art pre-trained model based on the Transformer architecture and T5\footnote{T5 paper and code: \url{https://paperswithcode.com/method/t5}} — another state-of-the-art Transformer based architecture that uses a text-to-text approach.
+We then want to perform an in-depth analysis of the obtained results with the models to deduce which architecture performs better and eventually also understand why it has better performances. We also want to see if we would have any improvement tracks in the end.
+
+\section{Implementation}
+Because the shared task is already a closed topic, many professional teams have made their way and produced a paper with satisfactory results. \citet{semeval} paper summarizes in a condensed way these results and the outline of the winning teams' implementations.
+
+The Language Model is very scholar and is implemented for academic purposes. RoBERTa has been integrated in the Transformers Ensembles sets of various winning—so we consider it interesting to add it to our analysis. T5 on the other hand would be a brand new implementation recommended in the conclusions of the \textit{aschern} \citet{aschern} team's project paper to further the topic research.
+
+We will implement all the models from scratch but will probably take inspiration from their code work publicly available on their project GitHub repository\footnote{\textit{aschern} team GitHub repository: \url{https://github.com/aschern/semeval2020_task11}}.
+
+\section{Milestones}
+Is this section really useful ?
+
+% To add references without citing in text
+\nocite{}
+
+% Entries custom bib
+\bibliography{custom}
+\bibliographystyle{acl_natbib}
+
+% \appendix
+% \section{Example Appendix}
+% \label{sec:appendix}
+% In case we need an appendix.
+
+\end{document}
