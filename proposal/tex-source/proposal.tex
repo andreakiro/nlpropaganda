@@ -19,42 +19,67 @@
 \usepackage{microtype}
 
 \title{
-% NLP Project Proposal — Fall 2021 \\
-Language Model, RoBERTa and T5 implementations \\ for Detection of Propaganda Techniques in News Articles.
+Language Model, RoBERTa and T5 implementations \\ 
+for Detection of Propaganda Techniques in News Articles.\\
+\vspace{0.2cm}
+\small Natural Language Processing Project Proposal, Fall 2021
 }
 
 \author{
 Antoine Basseto,
-Giacomo Camposampierro 
+Giacomo Camposampiero 
 \and Andrea Pinto \\         
-ETH Zurich - Swiss Federal Institute of Technology \\ \texttt{\{abasseto, gcamposampie, pintoa\}@ethz.ch}
+ETH Zurich - Swiss Federal Institute of Technology \\ 
+\texttt{\{abasseto, gcamposampie, pintoa\}@ethz.ch}
 }
 
 \begin{document}
 \maketitle
 
 \section{Introduction}
-The proliferation of online misinformation has led to a significant amount of research into the automatic detection of fake news.
-However, most efforts have focused on verifying the factual correctness of a piece of information, and little attention has been paid to the propaganda techniques used by malicious actors to spread their message.
 
-In this context, \textit{Task 11 of SemEval-2020}\footnote{The official task webpage: \url{https://propaganda.qcri.org/semeval2020-task11/}} aims to fill this gap.
-This shared task provides a well-annoted dataset of new articles enabling us to develop propaganda detection models.
-The focus of the task is broken down into two well-defined sub-tasks, namely \textit{1—Span identification (SI)} for detecting the propaganda text fragments in the news articles and \textit{2—technique classification TC} for detecting the type of propaganda used in a given text span.
+The proliferation of online misinformation has led to a significant amount of research into the automatic detection of fake news \cite{fakenews}. However, most of the efforts have been concentrated on whole-document classification \cite{rashkin-etal-2017-truth} or analysis of the general patterns of online propaganda \cite{garimella2015, chatfield2015}, while little has been done so far in terms of fine-grained text analysis. This approach could complement existing techniques and allow the user to extract more informed and nuanced judgment on the piece being read.
+
+In this context, \textit{Task 11 of SemEval-2020}\footnote{The official task webpage: \url{https://propaganda.qcri.org/semeval2020-task11/}} \cite{semeval} aims to bridge this gap, facilitating the development of models capable of spotting text fragments where a defined set of propaganda techniques are used. 
+This shared task provides a well-annotated dataset of 536 news articles, which enables the participant to develop detection models that automatically spot a defined range of 14 propaganda techniques in written texts \cite{semeval}.
+
+The focus of the task is broken down into two well-defined sub-tasks, namely \textit{(1) Span identification (SI)} to detect the text fragments representative of a propaganda technique in the news articles and \textit{(2) Technique classification (TC)} to detect the propaganda technique used in a given text span.
+
 
 \section{Objectives and Goals}
-The objective of this Natural Language Processing project would be to develop three model architectures for these two sub tasks and provide an error analysis for these models.
-Namely, we would like to implement a basic Language Model, RoBERTa\footnote{RoBERTa paper and code: \url{https://huggingface.co/roberta-base}} — a state-of-the-art pre-trained model based on the Transformer architecture and T5\footnote{T5 paper and code: \url{https://paperswithcode.com/method/t5}} — another state-of-the-art Transformer based architecture that uses a text-to-text approach.
-We then want to perform an in-depth analysis of the obtained results with the models to deduce which architecture performs better and eventually also understand why it has better performances. We also want to see if we would have any improvement tracks in the end.
+The primary goal of this Natural Language Processing project is two-fold:
+\begin{enumerate}
+    \item To implement different models able to automatically detect the use of propaganda techniques in text snippets, accomplishing both the \textit{Span identification} and \textit{Technique classification} sub-tasks of the previously mentioned shared task. \textit{SI} consists of a binary sequence tagging task, whereas \textit{TC} consists of a multi-class classification problem \cite{semeval}.
+    \item To compare the implemented models and draw conclusions on their performance through an error analysis for each of them.
+\end{enumerate}
+
+\noindent
+Furthermore, probings of possible future improvement tracks could be considered.
 
 \section{Implementation}
-Because the shared task is already a closed topic, many professional teams have made their way and produced a paper with satisfactory results. \citet{semeval} paper summarizes in a condensed way these results and the outline of the winning teams' implementations.
+Because the shared task is already a closed topic, many professional teams have made their way and produced a paper with satisfactory results. \citet{semeval} summarizes these results and outlines the winning teams' implementations. A literature review of these results was initially carried out to acquire information about possible implementation to be studied in our work.
 
-The Language Model is very scholar and is implemented for academic purposes. RoBERTa has been integrated in the Transformers Ensembles sets of various winning—so we consider it interesting to add it to our analysis. T5 on the other hand would be a brand new implementation recommended in the conclusions of the \textit{aschern} \citet{aschern} team's project paper to further the topic research.
+As a result, the literature review outlined three interesting architectures that could be implemented to fulfill Goal (1).
+\begin{enumerate}
+        \item A small self-trained language model to provide a baseline performance we can compare other models to. The model will be implemented using PyTorch \cite{NEURIPS2019_9015}.
+        \item RoBERTa \cite{roberta}, a state-of-the-art pre-trained model based on the Transformer architecture; this model is particularly appealing as it has been used in most winning teams' ensembles \cite{aschern, morio-etal-2020-hitachi-semeval} with quite interesting results.
+        \item T5 \cite{2020t5}, another state-of-the-art Transformer based architecture that uses a text-to-text approach, whose performances could lead to good prediction performances. This particular model was also suggested to be of interest by the \textit{aschern} team \cite{aschern}, who achieved top scores in both sub-tasks.
+    \end{enumerate}
 
-We will implement all the models from scratch but will probably take inspiration from their code work publicly available on their project GitHub repository\footnote{\textit{aschern} team GitHub repository: \url{https://github.com/aschern/semeval2020_task11}}.
+To achieve Goal (2), the comparison between models will be carried out based on their performance in the shared task, using the F1-score on the test dataset as proposed by the task's organizers \cite{semeval}. A more thorough error analysis will be done for each model, pointing out any pattern in their weaknesses and possible ways of improvement for future work.
 
 \section{Milestones}
-Is this section really useful ?
+The main deadlines outlined by the project regulation are reported in the following list. 
+\begin{itemize}
+    \item Project Proposal submission, \textit{31/10/2021}
+    \item Progress Report submission, \textit{15/12/2021}
+    \item Final Paper submission, \textit{15/01/2021}
+    \item Project Presentation, \textit{18/01/2021}
+\end{itemize}
+Other than these important milestones, the project group will also carry out weekly meeting in order to ensure a good communication and a regular project progress during the course of the semester. 
+
+\section{Expected results}
+Our team expects to be able to successfully implement all the three mentioned architecture and carry out an objective and complete error analysis on these models. Eventually, achieving good classification results on both \textit{SI} and \textit{TC} will be considered a great success, even if not the primary goal of this experience.
 
 % To add references without citing in text
 \nocite{}
