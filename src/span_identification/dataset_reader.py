@@ -4,6 +4,7 @@ import os
 
 from overrides import overrides
 
+from allennlp.data.dataset_readers.dataset_utils.span_utils import enumerate_spans
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.fields import Field, ListField, TextField, SpanField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
@@ -16,33 +17,40 @@ class SpanIdentificationReader(DatasetReader):
     def __init__(
             self,
             data_directory_path: str,
+            max_span_width: int,
             tokenizer: Tokenizer = WhitespaceTokenizer(),
             token_indexers: Dict[str, TokenIndexer] = {"tokens": SingleIdTokenIndexer()},
             **kwargs
         ):
             super().__init__(**kwargs)
             self._data_directory_path = data_directory_path
+            self._max_span_width = max_span_width
             self.tokenizer = tokenizer
             self.token_indexers = token_indexers
 
     @overrides
-    def text_to_instance(self, text: str, spans: List[Tuple[int, int]] = None) -> Instance:
+    def text_to_instance(self, text: str, gold_spans: List[Tuple[int, int]] = None) -> Instance:
         fields: Dict[str, Field] = {}
 
-        # Get list of sequences
-        sequences: List[TextField] = [TextField(self.tokenizer.tokenize(text[span_start, span_end]), self.token_indexers)
-                                      for span_start, span_end in spans]
-
-        # Add spans to instance
-        list_span_fields: List[SpanField] = [SpanField(span[0], 
-                                                       span[1], 
-                                                       seq) 
-                                                       for span, seq in zip(spans, sequences)]
-        fields["spans"] = ListField(list_span_fields)
-
-        # Add text to instance
+        # Create the TextField for the article
         tokens = self.tokenizer.tokenize(text)
-        fields["text"] = TextField(tokens, self.token_indexers)
+        article_field = TextField(tokens, self.token_indexers)
+
+        # Add gold spans to instance
+        list_gold_span_fields: List[SpanField] = [SpanField(start, 
+                                                            end - 1, # SpanField's bounds are inclusive, the dataset's end span is exclusive
+                                                            article_field) 
+                                                            for start, end in gold_spans]
+        fields["gold_spans"] = ListField(list_gold_span_fields)
+
+        # Extract article spans and add them to instance
+        spans = enumerate_spans(tokens, max_span_width=self._max_span_width)
+        list_span_fields: List[SpanField] = [SpanField(start, 
+                                                       end, # enumerate_spans retruns spans with inclusive boundaries
+                                                       article_field) 
+                                                       for start, end in spans]
+        #TODO: prune spans, by using heuristics and/or a model
+        fields["spans"] = ListField(list_gold_span_fields)
 
         return Instance(fields)
 
