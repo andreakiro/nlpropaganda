@@ -46,11 +46,11 @@ class SpanIdentificationReader(DatasetReader):
         # Extract article spans and add them to instance
         spans = enumerate_spans(tokens, max_span_width=self._max_span_width)
         list_span_fields: List[SpanField] = [SpanField(start, 
-                                                       end, # enumerate_spans retruns spans with inclusive boundaries
+                                                       end, # enumerate_spans returns spans with inclusive boundaries
                                                        article_field) 
                                                        for start, end in spans]
         #TODO: prune spans, by using heuristics and/or a model
-        fields["spans"] = ListField(list_gold_span_fields)
+        fields["spans"] = ListField(list_span_fields)
 
         return Instance(fields)
 
