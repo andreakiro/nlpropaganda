@@ -13,9 +13,6 @@ from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, EndpointSpanExtractor
 from allennlp.nn import util, InitializerApplicator
 
-from allennlp_models.coref.metrics.conll_coref_scores import ConllCorefScores
-from allennlp_models.coref.metrics.mention_recall import MentionRecall
-
 logger = logging.getLogger(__name__)
 
 @Model.register("span-identifier")
@@ -48,8 +45,9 @@ class SpanIdentifier(Model):
         vocab: Vocabulary,
         text_field_embedder: TextFieldEmbedder,
         context_layer: Seq2SeqEncoder,
-        classifier: torch.nn = None,
         feature_size: int,
+        max_span_width: int,
+        classifier: torch.nn = None,
         **kwargs
     ) -> None:
         super().__init__(vocab, **kwargs)
@@ -68,12 +66,13 @@ class SpanIdentifier(Model):
             input_dim=text_field_embedder.get_output_dim()
         )
 
-        ese_output_dim = _endpoint_span_extractor.get_output_dim()
-        ase_output_dim = _attentive_span_extractor.get_output_dim()
+        ese_output_dim = self._endpoint_span_extractor.get_output_dim()
+        ase_output_dim = self._attentive_span_extractor.get_output_dim()
 
         if classifier is None:
             self._classifier = torch.nn.Linear(ese_output_dim + ase_output_dim, 1)
-        else self._classifier = classifier
+        else:
+            self._classifier = classifier
 
     def forward(
         self,  # type: ignore
@@ -176,7 +175,7 @@ class SpanIdentifier(Model):
         prop_spans: torch.IntTensor,
         gold_spans: torch.IntTensor
     ) -> float:
-    """
+        """
         Computes scores for every pair of spans. Additionally, a dummy label is included,
         representing the decision that the span is not coreferent with anything. For the dummy
         label, the score is always zero. For the true antecedent spans, the score consists of
