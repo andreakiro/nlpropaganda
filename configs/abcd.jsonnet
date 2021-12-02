@@ -12,10 +12,12 @@ local lstm_dim = 200;
                 "model_name": bert_model,
                 "max_length": max_length
             }
-        }
+        },
+        "data_directory_path": "data/",
+        "max_span_width": 20
     },
-    "train_data_path": "data/train-task-si.labels",
-    "validation_data_path": "data/dev-task-si.labels",
+    "train_data_path": "train-task-si.labels",
+    "validation_data_path": "dev-task-si.labels",
     "model": {
         "type": "span-identifier",
         "text_field_embedder": {
