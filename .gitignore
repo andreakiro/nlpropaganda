@@ -1,2 +1,15 @@
-**/.DS_Store
+# MacOS related files
+.DS_Store
+.icloud
+
+# Python files
+__pycache__/
+
+# Jupyter notebooks
+.ipynb_checkpoints
+
+# Credentials
 **/.config
+
+# WIP Serialized models
+models/
