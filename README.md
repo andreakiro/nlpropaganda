@@ -3,9 +3,14 @@ Main repo for ETHZ Natural Language Processing course project.
 
 ## Latex editable documents
 - [Project proposal paper](https://www.overleaf.com/6931691827vgjtshtbyrbp) 
+- [Project paper](https://www.overleaf.com/8789365945bcnsfwsyzqdk)
+
+## Running the models
+```
+allennlp train configs/abcd.jsonnet --include-package src --serialization-dir models/model{x}
+```
 
 ## `allennlp` installation on M1
-
 ```
 # create env (Python3.9 will not work!)
 conda create --name env_name python=3.8
