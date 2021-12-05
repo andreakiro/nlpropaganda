@@ -1,22 +1,38 @@
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Dict
 
 import torch
 import torch.nn.functional as F
 
-from allennlp.data import TextFieldTensors, Vocabulary
+from allennlp.nn import util
 from allennlp.models.model import Model
-from allennlp.modules.token_embedders import Embedding
-from allennlp.modules import FeedForward, GatedSum
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+from allennlp.data import TextFieldTensors, Vocabulary
+from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, EndpointSpanExtractor
-from allennlp.nn import util, InitializerApplicator
 from src.si.si_metric import SpanIdenficationMetric
 
 logger = logging.getLogger(__name__)
 
 @Model.register("span-identifier")
 class SpanIdentifier(Model):
+    """
+    This model implements the propaganda spans identification task
+    from a given article and it's corresponding propaganda spans labels.
+
+    # Parameters
+    vocab: `Vocabulary` required.
+        Model and architecture vocabulary.
+    text_field_embedder : `TextFieldEmbedder` required.
+        Used to embed the `text` `TextField` we get as input to the model.
+    context_layer : `Seq2SeqEncoder` required.
+        This layer incorporates contextual information for each word in the article.
+    feature_size : `int` required.
+        The embedding size for all the embedded features e-g. span widths.
+    max_span_width : `int` required.
+        Heuristic of the maximum width of candidate spans.
+    classifier: `torch.nn` optional.
+        PyTorch Neural Network model to perform span identification task.
+    """
     def __init__(
         self,
         vocab: Vocabulary,
@@ -35,13 +51,14 @@ class SpanIdentifier(Model):
 
         self._endpoint_span_extractor = EndpointSpanExtractor(
             context_layer.get_output_dim(),
-            combination="x,y",
-            num_width_embeddings=max_span_width,
-            span_width_embedding_dim=feature_size,
-            bucket_widths=False,
+            combination = "x,y",
+            num_width_embeddings = max_span_width,
+            span_width_embedding_dim = feature_size,
+            bucket_widths = False,
         )
+
         self._attentive_span_extractor = SelfAttentiveSpanExtractor(
-            input_dim=text_field_embedder.get_output_dim()
+            input_dim = text_field_embedder.get_output_dim()
         )
 
         ese_output_dim = self._endpoint_span_extractor.get_output_dim()
@@ -54,30 +71,38 @@ class SpanIdentifier(Model):
 
     def forward(
         self,  # type: ignore
-        text: TextFieldTensors,
-        spans: torch.IntTensor,
+        content: TextFieldTensors,
+        all_spans: torch.IntTensor,
         gold_spans: torch.IntTensor = None,
     ) -> Dict[str, torch.Tensor]:
-        # Shape: (batch_size, article_length, embedding_size)
-        text_embeddings = self._text_field_embedder(text)
+        """
+        # Parameters
+        content: `TextFieldTensors` required.
+            Batch of article's contents under textual format.
+        all_spans: `torch.IntTensor` required.
+            Batch of all spans retrieved by our DatasetReader
+            on which we have to perform binary classification.
+        gold_spans: `torch.IntTensor` required.
+            Batch of gold spans i.e. the ground truth spans
+            labelled as propaganda in the corresponding article.
 
-        batch_size = spans.size(0)
-        article_length = text_embeddings.size(1)
-        num_spans = spans.size(1)
+        # Returns
+        An output dictionary consisting of:
+        si-spans: `torch.IntTensor` always.
+            Batch of spans classified as propaganda by our model.
+        probs-spans: `torch.IntTensor` always.
+            Probability overview for every spans given as input.
+        loss: `torch.FloatTensor` optional.
+            A scalar loss to be optimised when training.
+        """
+        # Shape: (batch_size, article_length, embedding_size)
+        text_embeddings = self._text_field_embedder(content)
 
         # Shape: (batch_size, article_length)
-        text_mask = util.get_text_field_mask(text)
-
-        # SpanFields return -1 when they are used as padding. As we do
-        # some comparisons based on span widths when we attend over the
-        # span representations that we generate from these indices, we
-        # need them to be <= 0. This is only relevant in edge cases where
-        # the number of spans we consider after the pruning stage is >= the
-        # total number of spans, because in this case, it is possible we might
-        # consider a masked span.
+        text_mask = util.get_text_field_mask(content)
 
         # Shape: (batch_size, num_spans, 2)
-        spans = F.relu(spans.float()).long()
+        spans = F.relu(all_spans.float()).long()
 
         # Shape: (batch_size, article_length, encoding_dim)
         contextualized_embeddings = self._context_layer(text_embeddings, text_mask)
@@ -89,26 +114,23 @@ class SpanIdentifier(Model):
         # Shape: (batch_size, num_spans, embedding_size + 2 * encoding_dim + feature_size)
         span_embeddings = torch.cat([endpoint_span_embeddings, attended_span_embeddings], -1)
 
-        # TODO: Pruning !
-
         # Shape: (batch_size, 1)
         logits = self._classifier(span_embeddings)
-
-        # Shape: (batch_size, 1)
         probs = F.sigmoid(logits)
 
         # Shape: (batch_size, num_spans_propaganda, 2)
-        prop_spans = spans[probs >= 0.5]
+        si_spans = spans[probs >= 0.5]
 
         output_dict = {
-            "propaganda_spans": prop_spans,
+            "si-spans": si_spans,
+            "probs-spans": probs,
         }
 
         if gold_spans is not None:
-            self._metrics(prop_spans, gold_spans)
+            self._metrics(si_spans, gold_spans)
             output_dict["loss"] = self._metrics.get_metric()["si-loss"]
 
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return self._metrics.get_metric()
+        return self._metrics.get_metric(reset)
