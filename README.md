@@ -8,6 +8,8 @@ Main repo for ETHZ Natural Language Processing course project.
 ## Running the models
 ```
 allennlp train configs/abcd.jsonnet --include-package src --serialization-dir models/model{x}
+allennlp evaluate {model_serialized_dir} {dataset_dir} --include-package src
+allennlp predict {model_serialized_dir} {dataset_dir} --include-package src --predictor {predictor_name}
 ```
 
 ## `allennlp` installation on M1

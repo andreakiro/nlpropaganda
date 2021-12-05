@@ -3,6 +3,7 @@ from typing import Dict, Optional
 
 import torch
 from sklearn.metrics import r2_score
+from allennlp.data import TextFieldTensors
 from allennlp.models.model import Model
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ class TechniqueClassifier(Model):
 
     def forward(
         self, # type: ignore
+        text: TextFieldTensors,
         si_spans: torch.IntTensor,
         gold_spans: torch.IntTensor = None,
         gold_labels: torch.IntTensor = None,
@@ -68,7 +70,6 @@ class TechniqueClassifier(Model):
         technique_preds = torch.FloatTensor(technique_probs.shape).zero_()
         technique_preds.scatter_(0, max_idx, 1)
 
-        
         output_dict = {
             "technique_preds": technique_preds,
             "technique_probs": technique_probs,
