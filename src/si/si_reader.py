@@ -5,8 +5,6 @@ import os
 
 from overrides import overrides
 
-import numpy as np
-
 from allennlp.data.dataset_readers.dataset_utils.span_utils import enumerate_spans
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.fields import Field, ListField, TextField, SpanField
@@ -19,18 +17,40 @@ logger = logging.getLogger(__name__)
 class SpanIdentificationReader(DatasetReader):
     def __init__(
             self,
-            data_directory_path: str,
+            data_dir_path: str,
             max_span_width: int,
             tokenizer: Tokenizer = SpacyTokenizer(),
             token_indexers: Dict[str, TokenIndexer] = {"tokens": SingleIdTokenIndexer()},
             **kwargs
         ):
             super().__init__(**kwargs)
-            self._data_directory_path = data_directory_path
+            self._data_dir_path = data_dir_path
             self._max_span_width = max_span_width
             self.tokenizer = tokenizer
             self.token_indexers = token_indexers
+    
+    @overrides
+    def _read(self, file_path) -> Iterable[Instance]:
+        articles_dir = file_path
 
+        with os.scandir(articles_dir) as articles:
+            for article in articles:
+                content: str = None
+                gold_spans: List[Tuple[int, int]] = None
+
+                with open(article, 'r') as file:
+                    content = file.read()
+
+                if "test" not in articles_dir:
+                    gold_spans = []
+                    with open(article.name[:-3] + 'task-si.labels', 'r') as lines:
+                        for line in lines:
+                            _, span_start, span_end = line.strip().split("\t")
+                            gold_spans.append((span_start, span_end))
+                
+                # add assertions
+                yield self.text_to_instance(content, gold_spans)
+    
     @overrides
     def text_to_instance(self, text: str, gold_spans: List[Tuple[int, int]] = None) -> Instance:
         fields: Dict[str, Field] = {}
@@ -40,6 +60,28 @@ class SpanIdentificationReader(DatasetReader):
         article_field = TextField(tokens, self.token_indexers)
         fields["text"] = article_field
 
+        # Add gold spans to instance
+        if gold_spans is not None:
+            gold_spans_in_token_space = self._map_to_token_space(text, gold_spans, tokens)
+            list_gold_span_fields: List[SpanField] = [SpanField(start, 
+                                                                end, 
+                                                                article_field) 
+                                                                for start, end in gold_spans_in_token_space]
+            fields["gold_spans"] = ListField(list_gold_span_fields)
+
+        # Extract article spans and add them to instance
+        spans = enumerate_spans(tokens, max_span_width=self._max_span_width)
+        list_span_fields: List[SpanField] = [SpanField(start, 
+                                                       end, # enumerate_spans returns spans with inclusive boundaries
+                                                       article_field) 
+                                                       for start, end in spans]
+        
+        #TODO Prune spans, by using heuristics
+        fields["spans"] = ListField(list_span_fields)
+
+        return Instance(fields)
+
+    def _map_to_token_space(self, text, gold_spans, tokens):
         # Mapping gold spans to the token space
         gold_spans_starts = [start for start, _ in gold_spans]
         gold_spans_tokens = [self.tokenizer.tokenize(text[start:end]) for start, end in gold_spans]
@@ -74,67 +116,4 @@ class SpanIdentificationReader(DatasetReader):
         logger.info(f"gold spans in token space in tokens\n{[tokens[start:end+1] for start, end in gold_spans_in_token_space]}")
         # assert np.all([len(starts) == 1 for starts in gold_spans_in_token_space]), "Failed conversion of span in token space"
         # SpanField's bounds are inclusive
-        
-
-        # Add gold spans to instance
-        list_gold_span_fields: List[SpanField] = [SpanField(start, 
-                                                            end, 
-                                                            article_field) 
-                                                            for start, end in gold_spans_in_token_space]
-        fields["gold_spans"] = ListField(list_gold_span_fields)
-
-        # Extract article spans and add them to instance
-        spans = enumerate_spans(tokens, max_span_width=self._max_span_width)
-        list_span_fields: List[SpanField] = [SpanField(start, 
-                                                       end, # enumerate_spans returns spans with inclusive boundaries
-                                                       article_field) 
-                                                       for start, end in spans]
-        #TODO: prune spans, by using heuristics and/or a model
-        fields["spans"] = ListField(list_span_fields)
-
-        return Instance(fields)
-
-    @overrides
-    def _read(self, file_path: str) -> Iterable[Instance]:
-
-        logger.info(f"Searching for data in {self._data_directory_path}")
-
-        assert file_path.endswith(".labels"), ".labels file expected"
-
-        with open(os.path.join(self._data_directory_path, file_path), 'r') as lines:
-            logger.info(f"Loading labels from {os.path.join(self._data_directory_path, file_path)}")
-
-            current_article_id: str = None
-            spans: List[Tuple[int, int]] = []
-            for line in lines:
-                article_id, span_start, span_end = line.strip().split("\t")
-
-                span_start = int(span_start)
-                span_end = int(span_end)
-
-                # Deal with first article
-                if current_article_id == None:
-                    current_article_id = article_id
-
-                if article_id != current_article_id:
-                    # New article, flush old article data
-                    yield self._instanciate_article_data(current_article_id, spans)
-                    spans.clear()
-                    current_article_id = article_id
-
-                # Remember spans for current article
-                spans.append((span_start, span_end))
-
-            # Deal with last article
-            yield self._instanciate_article_data(current_article_id, spans)
-
-    def _instanciate_article_data(self, article_id, spans):
-        text = None
-        with os.scandir(self._data_directory_path) as entries:
-            for entry in entries:
-                if article_id in entry.name and entry.name.endswith(".txt"):
-                    with open(entry, 'r') as file:
-                        text = file.read()
-        assert text is not None, f"Article {article_id} not found"
-
-        return self.text_to_instance(text, spans)
+        return gold_spans_in_token_space
