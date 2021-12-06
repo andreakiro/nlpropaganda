@@ -2,7 +2,10 @@ from typing import Optional
 
 import logging
 import torch
+import itertools
 from allennlp.training.metrics.metric import Metric
+
+logger = logging.getLogger(__name__)
 
 class SpanIdenficationMetric(Metric):
     
@@ -18,28 +21,28 @@ class SpanIdenficationMetric(Metric):
         self.cs = 0
         self.ct = 0
 
-    def __call__(self, prop_spans: torch.Tensor, gold_spans: torch.Tensor, mask: Optional[torch.BoolTensor]):
+    def __call__(self, prop_spans: torch.Tensor, gold_spans: torch.Tensor, mask: Optional[torch.BoolTensor] = None):
         for article in range(prop_spans.size(dim=0)):
             # merge overlapping predicted spans in the same article
-            prop_spans[article] = merge_intervals(prop_spans[article])
+            prop_spans[article] = self.merge_intervals(prop_spans[article])
             for combination in itertools.product(prop_spans[article, :, :], gold_spans[article, :, :]):
                 tspan = combination[0]
                 sspan = combination[1]
                 # comput C(s,t,|s|) and add it to the partial sum
-                self.s_sum += c_function(sspan, tspan, sspan[1]-sspan[0])
+                self.s_sum += self.c_function(sspan, tspan, sspan[1]-sspan[0])
                 # comput C(s,t,|t|) and add it to the partial sum
-                self.t_sum += c_function(sspan, tspan, tspan[1]-tspan[0])
+                self.t_sum += self.c_function(sspan, tspan, tspan[1]-tspan[0])
 
     def get_metric(self, reset: bool = False):
         precision = 0
         recall = 0
-        if s_cardinality != 0:
-            precision = s_sum / s_cardinality
-        if t_cardinality != 0:
-            recall = t_sum / t_cardinality
+        if self.s_cardinality != 0:
+            precision = self.s_sum / self.s_cardinality
+        if self.t_cardinality != 0:
+            recall = self.t_sum / self.t_cardinality
         return (2 * precision * recall) / (precision + recall) if precision + recall > 0 else 0
 
-    def c_function(s, t, h):
+    def c_function(self, s, t, h):
         """
         Compute C(s,t,h)
         :param s: predicted span 
@@ -47,11 +50,11 @@ class SpanIdenficationMetric(Metric):
         :param h: normalizing factor
         :return: value of the function for the given parameters
         """
-        intersection = intersect(s, t)
+        intersection = self.intersect(s, t)
         return intersection/h if intersection > 0 else 0    
 
     
-    def intersect(s, t):
+    def intersect(self, s, t):
         """
         Intersect two spans.
         :param s: first span
@@ -62,7 +65,7 @@ class SpanIdenficationMetric(Metric):
         end = min(s[1], t[1])
         return end - start + 1
 
-    def merge_intervals(prop_spans):
+    def merge_intervals(self, prop_spans):
         """
         Merge overlapping spans in the given span tensor.
         :param prop_spans: spans to be merged
@@ -70,14 +73,14 @@ class SpanIdenficationMetric(Metric):
         """
         last = 0
         # sort the predicted spans by start index
-        prop_spans[prop_spans[:, 0].sort()[1]]
+        prop_spans_sorted = prop_spans[prop_spans[:, 0].sort()[1]]
         # debug
         logger.info(f"please check me!")
         logger.info(f"predictions: {prop_spans}")
         logger.info(f"sorted predictions: {prop_spans_sorted}")
         # for each span in the sorted tensor, check for intersection with rightmost span analyzed
         for index in range(prop_spans_sorted.size(dim=0)):
-            if((not last) or (intersect(prop_spans_sorted[index,:], prop_spans_sorted[last,:]) < -1)):
+            if((not last) or (self.intersect(prop_spans_sorted[index,:], prop_spans_sorted[last,:]) < -1)):
                 # add the span to the stack if it's empty or if the current span 
                 # does not intersect with the last span in the stack or has not distance 1 from it
                 last += 1

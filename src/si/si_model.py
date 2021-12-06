@@ -43,6 +43,7 @@ class SpanIdentifier(Model):
         classifier: torch.nn = None,
         **kwargs
     ) -> None:
+        logger.info("Here we are!")
         super().__init__(vocab, **kwargs)
 
         self._text_field_embedder = text_field_embedder
@@ -114,12 +115,13 @@ class SpanIdentifier(Model):
         # Shape: (batch_size, num_spans, embedding_size + 2 * encoding_dim + feature_size)
         span_embeddings = torch.cat([endpoint_span_embeddings, attended_span_embeddings], -1)
 
-        # Shape: (batch_size, 1)
+        # Shape: (batch_size, num_spans_propaganda, 1)
         logits = self._classifier(span_embeddings)
         probs = F.sigmoid(logits)
 
         # Shape: (batch_size, num_spans_propaganda, 2)
-        si_spans = spans[probs >= 0.5]
+        si_spans = torch.masked_select(spans, probs >= 0.5)
+        # si_spans = spans[probs >= 0.5]
 
         output_dict = {
             "si-spans": si_spans,

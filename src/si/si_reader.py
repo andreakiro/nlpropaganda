@@ -1,7 +1,8 @@
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, MutableMapping, Tuple
 import logging
 import string
 import os
+from allennlp.data.tokenizers.token_class import Token
 
 from overrides import overrides
 
@@ -38,7 +39,7 @@ class SpanIdentificationReader(DatasetReader):
                 content: str = None
                 gold_spans: List[Tuple[int, int]] = None
 
-                logger.info(f"Reading {article.name[:-3]}")
+                # logger.info(f"Reading {article.name[:-3]}")
 
                 with open(article, 'r') as file:
                     content = file.read()
@@ -52,87 +53,75 @@ class SpanIdentificationReader(DatasetReader):
                 
                 # add assertions
                 yield self.text_to_instance(content, gold_spans)
+        
         logger.info(f"Finished reading {articles_dir}")
     
     @overrides
-    def text_to_instance(self, text: str, gold_spans: List[Tuple[int, int]] = None) -> Instance:
+    def text_to_instance(self, content: str, gold_spans: List[Tuple[int, int]] = None) -> Instance:
         fields: Dict[str, Field] = {}
 
         # Create the TextField for the article
-        tokens = self.tokenizer.tokenize(text)
+        tokens: List[Token] = self.tokenizer.tokenize(content)
         article_field = TextField(tokens, self.token_indexers)
-        fields["text"] = article_field
+        fields["content"] = article_field
 
         # Add gold spans to instance
         if gold_spans is not None:
-            gold_spans_in_token_space = self._map_to_token_space(text, gold_spans, tokens)
+            gold_spans_in_token_space = self._map_to_token_space(content, gold_spans, tokens)
             list_gold_span_fields: List[SpanField] = [SpanField(start, end, article_field) for start, end in gold_spans_in_token_space]
-            fields["gold_spans"] = ListField(list_gold_span_fields) if len(list_gold_span_fields) != 0 else ListField.empty_field
+            fields["gold_spans"] = ListField(list_gold_span_fields) if len(list_gold_span_fields) != 0 else ListField([article_field]).empty_field()
 
         # Extract article spans and add them to instance
         spans = enumerate_spans(tokens, max_span_width=self._max_span_width)
         list_span_fields: List[SpanField] = [SpanField(start, end, article_field) for start, end in spans]
         
         #TODO Prune spans, by using heuristics
-        fields["spans"] = ListField(list_span_fields)
+        fields["all_spans"] = ListField(list_span_fields)
 
         return Instance(fields)
 
-    def _map_to_token_space(self, text: str, gold_spans, tokens):
-        # Mapping gold spans to the token space
-        gold_spans_starts = [start for start, _ in gold_spans]
+    def _map_to_token_space(
+        self,
+        content: str,
+        gold_spans: List[Tuple[int, int]],
+        tokens: List[Token]
+    ):
         mapping = {}
 
-        text_index = 0
-        if text_index in gold_spans_starts:
-            mapping[text_index] = 0
-        
-        for token_index, token in enumerate(tokens):
-            
-            tmp = text_index
-            while text_index < tmp + len(token.text):
-                text_index += 1
-                if text_index in gold_spans_starts:
-                    mapping[text_index] = token_index
-
-            while text_index < len(text) and text[text_index] in string.whitespace:
-                text_index += 1
-                if text_index in gold_spans_starts:
-                    mapping[text_index] = token_index
-
-        gold_spans_tokens = [self.tokenizer.tokenize(text[start:end+1]) for start, end in gold_spans]
-        logger.info(f"gold spans tokens\n\n{gold_spans_tokens}\n")
-
-        gold_spans_in_token_space = [mapping[start] for start, _ in gold_spans]
-        gold_spans_in_token_space = [(start_token, len(self.tokenizer.tokenize(text[span[0]:span[1]]))) for start_token, span in zip(gold_spans_in_token_space, gold_spans)]
-
-        logger.info(f"gold spans in token space in tokens\n\n{[tokens[start:end+1] for start, end in gold_spans_in_token_space]}\n")
-        return gold_spans_in_token_space
-
-    def _map_to_token_space_2(self, text: str, gold_spans, tokens):
-        # Mapping gold spans to the token space
+        idx = 0
+        token_id = 0
+        cur_token_size = len(tokens[token_id].text)
         gold_spans_flattened = [bound for span in gold_spans for bound in span]
-        mapping = {}
 
-        text_index = 0
-        if text_index in gold_spans_flattened:
-            mapping[text_index] = 0
-        
-        for token_index, token in enumerate(tokens):
+        for i, char in enumerate(content):
+            if i in gold_spans_flattened:
+                if char in string.whitespace:
+                    mapping[i] = token_id - 1
+                else:
+                    mapping[i] = token_id
+
+            if char in string.whitespace:
+                if i in gold_spans_flattened:
+                    mapping[i] = token_id - 1
+            else:
+                if i in gold_spans_flattened:
+                    mapping[i] = token_id
             
-            tmp = text_index
-            while text_index < tmp + len(token.text):
-                text_index += 1
-                if text_index in gold_spans_flattened:
-                    mapping[text_index] = token_index
+            if char not in string.whitespace:
+                if idx < cur_token_size - 1:
+                    idx += 1
+                else:
+                    idx = 0
+                    token_id += 1
+                    if token_id < len(tokens):
+                        cur_token_size = len(tokens[token_id].text)
 
-            while text_index < len(text) and text[text_index] in string.whitespace:
-                text_index += 1
-                if text_index in gold_spans_flattened:
-                    mapping[text_index] = token_index
+        gold_spans_token_space = [(mapping[start], mapping[end]) for start, end in gold_spans]
 
-        gold_spans_tokens = [self.tokenizer.tokenize(text[start:end+1]) for start, end in gold_spans]
-        logger.info(f"gold spans tokens\n\n{gold_spans_tokens}\n")
-        gold_spans_in_token_space = [(mapping[start], mapping[end]) for start, end in gold_spans]
-        logger.info(f"gold spans in token space in tokens\n\n{[tokens[start:end+1] for start, end in gold_spans_in_token_space]}\n")
-        return gold_spans_in_token_space
+        # gold_spans_tokens = [self.tokenizer.tokenize(content[start: end + 1]) for start, end in gold_spans]
+        # gold_spans_tokens_in_token_space = [tokens[start: end + 1] for start, end in gold_spans_token_space]
+
+        # logger.info(f"gold spans tokens\n\n{gold_spans_tokens}\n")
+        # logger.info(f"gold spans tokens computer\n\n{gold_spans_tokens_in_token_space}\n")
+
+        return gold_spans_token_space
