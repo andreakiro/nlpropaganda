@@ -43,7 +43,7 @@ class SpanIdentifier(Model):
         classifier: torch.nn = None,
         **kwargs
     ) -> None:
-        logger.info("Here we are!")
+        logger.info("Initializing SpanIdentifier Model")
         super().__init__(vocab, **kwargs)
 
         self._text_field_embedder = text_field_embedder
@@ -117,11 +117,13 @@ class SpanIdentifier(Model):
 
         # Shape: (batch_size, num_spans_propaganda, 1)
         logits = self._classifier(span_embeddings)
-        probs = F.sigmoid(logits)
+        probs = torch.sigmoid(logits)
 
         # Shape: (batch_size, num_spans_propaganda, 2)
-        si_spans = torch.masked_select(spans, probs >= 0.5)
-        # si_spans = spans[probs >= 0.5]
+        mask = probs >= 0.5
+        mask = torch.stack((mask, mask), dim=2)
+        mask = mask.reshape(mask.shape[0], mask.shape[1], 2)
+        si_spans = torch.masked_select(spans, mask).reshape(spans.shape[0], -1, 2)
 
         output_dict = {
             "si-spans": si_spans,
@@ -129,8 +131,19 @@ class SpanIdentifier(Model):
         }
 
         if gold_spans is not None:
+            target = torch.zeros(probs.shape, dtype=torch.float)
+            for i, b_spans in enumerate(spans):
+                if gold_spans.numel() > 0:
+                    b_gold_spans = gold_spans[i]
+                    for j, span in enumerate(b_spans):
+                        for gold_span in b_gold_spans:
+                            if span[0] == gold_span[0] and span[1] == gold_span[1]:
+                                target[i][j] = 1
+                                break
+            
             self._metrics(si_spans, gold_spans)
-            output_dict["loss"] = self._metrics.get_metric()["si-loss"]
+            output_dict['si-metric'] = self._metrics.get_metric()["si-metric"]
+            output_dict["loss"] = F.binary_cross_entropy(probs, target)
 
         return output_dict
 
