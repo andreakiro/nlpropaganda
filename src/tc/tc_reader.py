@@ -1,18 +1,25 @@
 from typing import Dict, Iterable, List, Tuple
 import logging
 import os
+from allennlp.models.model import Model
 
 from overrides import overrides
 
+from src.utils import label_to_int, get_not_propaganda
+
 import torch
+from sklearn.preprocessing import LabelEncoder
 
 from allennlp.data.dataset_readers.dataset_utils.span_utils import enumerate_spans
 from allennlp.data import DatasetReader, Instance
 from allennlp.data.fields import Field, ListField, TextField, SpanField, SequenceLabelField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer
+from allennlp.models.archival import Archive
+from allennlp.data.fields.label_field import LabelField
 
 from src.si.si_model import SpanIdentifier
+
 
 logger = logging.getLogger(__name__)
 
@@ -50,34 +57,25 @@ class TechniqueClassificationReader(DatasetReader):
     """
     def __init__(
         self,
-        si_model: SpanIdentifier,
         max_span_width: int,
-        articles_dir_path: str,
-        labels_file_path: str = None,
+        si_model: Model,
         tokenizer: Tokenizer = SpacyTokenizer(),
-        token_indexer: Dict[str, TokenIndexer] = {"tokens": SingleIdTokenIndexer()},
+        token_indexers: Dict[str, TokenIndexer] = {"tokens": SingleIdTokenIndexer()},
         **kwargs
     ):
         super().__init__(**kwargs)
-        
-        if labels_file_path is not None:
-            assert labels_file_path.endswith(".labels"), ".labels file expected for training."
-            self._task = "training"
-        else:
-            self._task = "testing"
-        
         self._si_model = si_model
         self._max_span_width = max_span_width
-        self.articles_dir_path = articles_dir_path
-        self._labels_file_path = labels_file_path
         self._tokenizer = tokenizer
-        self._token_indexer = token_indexer
+        self._token_indexer = token_indexers
 
     @overrides
     def _read(self, file_path: str) -> Iterable[Instance]:
         articles_dir = file_path
         with os.scandir(articles_dir) as articles:
             for article in articles:
+                if not article.name.endswith('.txt'):
+                    continue
                 content: str = None
                 gold_label_spans: List[Tuple[str, int, int]] = None
 
@@ -86,13 +84,15 @@ class TechniqueClassificationReader(DatasetReader):
 
                 if "test" not in articles_dir:
                     gold_label_spans = []
-                    with open(article.name[:-3] + 'task-tc.labels', 'r') as lines:
+                    with open(os.path.join(articles_dir, 'labels', article.name[:-3] + 'task-flc-tc.labels'), 'r') as lines:
                         for line in lines:
                             _, label, span_start, span_end = line.strip().split("\t")
-                            gold_label_spans.append((label, span_start, span_end))
+                            gold_label_spans.append((label, int(span_start), int(span_end)))
                 
                 # add assertions
                 yield self.text_to_instance(content, gold_label_spans)
+        
+        logger.info(f'Finished reading {articles_dir}')
     
     @overrides
     def text_to_instance(
@@ -108,16 +108,24 @@ class TechniqueClassificationReader(DatasetReader):
 
         # Extract article spans and add them to instance
         all_spans = enumerate_spans(tokens, max_span_width = self._max_span_width)
-        pruned_spans = all_spans  #TODO Prune spans by using heuristics
-        si_spans = self._si_model(article_field, pruned_spans)
+
+        #TODO Prune spans by using heuristics
+        pruned_spans = all_spans
+        spans_field = ListField([SpanField(start, end, article_field) for start, end in pruned_spans])
+
+        inst = Instance({'content': article_field, 'all_spans': spans_field})
+        si_spans = self._si_model.forward_on_instance(inst)["si-spans"]
 
         # Add si-spans to our field dict
-        fields["si-spans"] = ListField([SpanField(start, end, article_field) for start, end in si_spans])
+        dummy: SpanField = SpanField(-1, -1, article_field).empty_field()
+        fields["si_spans"] = ListField([SpanField(start, end, article_field) for start, end in si_spans]) if len(si_spans) != 0 else ListField([dummy]).empty_field()
 
         if gold_label_spans is not None:
             # Add gold-spans to our field dict
             labels = self._get_labels(si_spans, gold_label_spans)
-            fields["gold-spans"] = SequenceLabelField(labels, fields["si-spans"])
+            fields["gold_labels"] = ListField([LabelField(label, skip_indexing=True) for label in labels]) if len(labels) != 0 else ListField([LabelField(-1, skip_indexing=True).empty_field()]).empty_field() 
+            # fields["gold_spans"] = SequenceLabelField(labels, fields["si_spans"]) if len(si_spans) != 0 else SequenceLabelField([], ListField([SpanField(-1,-1,article_field).empty_field()]).empty_field()).empty_field()
+            # fields["gold_spans"] = SequenceLabelField(labels, fields["si_spans"]) if len(si_spans) != 0 else SequenceLabelField([], article_field.empty_field()).empty_field()
 
         return Instance(fields)
 
@@ -144,10 +152,11 @@ class TechniqueClassificationReader(DatasetReader):
             labelled = False
             for tup in gold_label_spans:
                 if span[0] == tup[1] and span[1] == tup[2]: # smarter ? achtung mapping int->str
-                    labels.append(tup[0])
+                    labels.append(label_to_int(tup[0]))
                     labelled = True
                     break
             if not labelled:
-                labels.append(0)
+                labels.append(get_not_propaganda())
         
+        #return torch.as_tensor(LabelEncoder().fit_transform(labels))
         return labels

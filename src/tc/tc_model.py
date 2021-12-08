@@ -1,10 +1,21 @@
 import logging
 from typing import Dict, Optional
+from allennlp.data.vocabulary import Vocabulary
+from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
+from allennlp.modules.span_extractors.endpoint_span_extractor import EndpointSpanExtractor
+from allennlp.modules.span_extractors.self_attentive_span_extractor import SelfAttentiveSpanExtractor
+from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
+from allennlp.training.metrics.fbeta_multi_label_measure import FBetaMultiLabelMeasure
 
 import torch
-from sklearn.metrics import r2_score
+import torch.nn.functional as F
+
+from sklearn.metrics import f1_score
+
+from allennlp.nn import util
 from allennlp.data import TextFieldTensors
 from allennlp.models.model import Model
+from torch.overrides import get_overridable_functions
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +25,7 @@ class TechniqueClassifier(Model):
     This model implements the propaganda technique classification
     from a given set of text spans identified as propagandist.
 
-    # Paramters
+    # Parameters
 
     input_size: `int` required.
         Input size to our classification model i.e. spans embedding size.
@@ -23,14 +34,39 @@ class TechniqueClassifier(Model):
     classifier: `torch.nn` optional.
         PyTorch Neural Network model to perform classification task.
     """
-    def __init__(self, 
-        input_size: int,
-        output_size: int,
+    def __init__(
+        self, 
+        vocab: Vocabulary,
+        text_field_embedder: TextFieldEmbedder,
+        context_layer: Seq2SeqEncoder,
+        feature_size: int,
+        max_span_width: int,
+        output_size: int = 15,
         classifier: torch.nn = None,
-        serialization_dir: Optional[str] = None, # May be clean to use
         **kwargs
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(vocab, **kwargs)
+
+        self._text_field_embedder = text_field_embedder
+        self._context_layer = context_layer
+        self._metrics = FBetaMultiLabelMeasure()
+
+        self._endpoint_span_extractor = EndpointSpanExtractor(
+            context_layer.get_output_dim(),
+            combination = "x,y",
+            num_width_embeddings = max_span_width,
+            span_width_embedding_dim = feature_size,
+            bucket_widths = False,
+        )
+
+        self._attentive_span_extractor = SelfAttentiveSpanExtractor(
+            input_dim = text_field_embedder.get_output_dim()
+        )
+
+        ese_output_dim = self._endpoint_span_extractor.get_output_dim()
+        ase_output_dim = self._attentive_span_extractor.get_output_dim()
+        input_size = ese_output_dim + ase_output_dim
+
         if classifier is None:
             self._classifier = torch.nn.Linear(input_size, output_size)
         else:
@@ -38,9 +74,8 @@ class TechniqueClassifier(Model):
 
     def forward(
         self, # type: ignore
-        text: TextFieldTensors,
+        content: TextFieldTensors,
         si_spans: torch.IntTensor,
-        gold_spans: torch.IntTensor = None,
         gold_labels: torch.IntTensor = None,
     ) -> Dict[str, torch.Tensor]:
         """
@@ -57,66 +92,76 @@ class TechniqueClassifier(Model):
         technique: `torch.IntTensor` always
             The model prediction on the batch of given SpanFields.
         loss: `torch.FloatTensor` optional
-            A scalar loss to be optimised.
+            A scalar loss to be optimised when training.
         """
-        if gold_spans is not None:
-            assert gold_labels is not None, "Must provide gold spans and corresponding labels."
+        
+        logger.info(f"SI SPANS: {si_spans}")
+        # batch not considered
+        if si_spans[0][0][0] == -1:
+            return {"loss": F.binary_cross_entropy(torch.tensor([1]),torch.tensor([1]))}
 
-        logits = self._classifier(si_spans)
-        technique_probs = torch.softmax(logits)
+        # Shape: (batch_size, article_length, embedding_size)
+        text_embeddings = self._text_field_embedder(content)
 
-        # Not sure of that yet
-        max_idx = torch.argmax(technique_probs, dim=1)
-        technique_preds = torch.FloatTensor(technique_probs.shape).zero_()
-        technique_preds.scatter_(0, max_idx, 1)
+        # Shape: (batch_size, article_length)
+        text_mask = util.get_text_field_mask(content)
+
+        # Shape: (batch_size, num_spans, 2)
+        spans = F.relu(si_spans.float()).long()
+
+        # Shape: (batch_size, article_length, encoding_dim)
+        contextualized_embeddings = self._context_layer(text_embeddings, text_mask)
+        # Shape: (batch_size, num_spans, 2 * encoding_dim + feature_size)
+        endpoint_span_embeddings = self._endpoint_span_extractor(contextualized_embeddings, spans)
+        # Shape: (batch_size, num_spans, embedding_size)
+        attended_span_embeddings = self._attentive_span_extractor(text_embeddings, spans)
+
+        # Shape: (batch_size, num_spans, embedding_size + 2 * encoding_dim + feature_size)
+        span_embeddings = torch.cat([endpoint_span_embeddings, attended_span_embeddings], -1)
+
+        # Shape: (batch_size, num_spans, num_classes)
+        logits = self._classifier(span_embeddings)
+        technique_probs = F.softmax(logits, dim=2)
+
+        # Shape: (batch_size, num_spans, 1)
+        pred_labels = torch.argmax(technique_probs, dim=2)
+        
+        # technique_preds = torch.FloatTensor(technique_probs.shape).zero_()
+        # technique_preds.scatter_(0, max_idx, 1)
 
         output_dict = {
-            "technique_preds": technique_preds,
+            # "technique_preds": technique_preds,
             "technique_probs": technique_probs,
         }
 
-        if gold_spans is not None:
-            labels = self._get_labels(si_spans, gold_spans, gold_labels)
-            output_dict["loss"] = self._compute_loss(labels, technique_preds)
+        if gold_labels is not None:
+            #self._metrics(pred_labels, gold_labels)
+            logger.info(f'SIZE OF LOGITS: {logits.shape}')
+            logger.info(f'SIZE OF GOLD LABELS: {gold_labels.shape}')
+            logger.info(f'SIZE OF LOGITS FLATTENED: {torch.flatten(logits, end_dim=1).shape}')
+            logger.info(f'SIZE OF GOLD LABELS FLATTENED: {torch.flatten(gold_labels).shape}')
+            output_dict["loss"] = F.cross_entropy(torch.flatten(logits, end_dim=1), torch.flatten(gold_labels))        
         
         return output_dict
 
-    def get_metrics(self) -> Dict[str, float]:
-        return None # TODO
+    def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        return self._metrics.get_metric(reset)
     
-    def _compute_loss(
-        self, 
-        labels: torch.IntTensor,
-        predictions: torch.IntTensor,
-    ) -> float:
-        """
-        # Parameters
-        label: `torch.IntTensor` required.
-            Ground truth label (propaganda technique) for a given span.
-        prediction: `torch.IntTensor` required.
-            Model propaganda technique prediction for a given span.
+    # def _compute_loss(
+    #     self, 
+    #     labels: torch.IntTensor,
+    #     predictions: torch.IntTensor,
+    # ) -> float:
+    #     """
+    #     # Parameters
+    #     label: `torch.IntTensor` required.
+    #         Ground truth label (propaganda technique) for a given span.
+    #     prediction: `torch.IntTensor` required.
+    #         Model propaganda technique prediction for a given span.
         
-        # Returns
-        score: `float` always
-            sklean R2 score `float`
-        """
-        return r2_score(labels, predictions)
-    
-    def _get_labels(
-        self,
-        si_spans: torch.IntTensor,
-        gold_spans: torch.IntTensor,
-    ) -> torch.IntTensor:
-        """
-        # Parameters
-        si_spans: `torch.IntTensor` required.
-            Batch of SpanFields (?) on which to perform training or prediction.
-        gold_spans: `torch.IntTensor` optional.
-            Batch of SpanFields corresponding labels when training the model.
-        
-        # Returns
-        labels: `torch.IntTensor` always
-            Labels of span s for every span s in si_spans appearing in gold_spans
-            Label "no propaganda" for every span s in si_spans not appearing in gold_spans
-        """
-        return None
+    #     # Returns
+    #     score: `float` always
+    #         sklean F1 score `float`
+    #     """
+        #return F.cross_entropy()
+        #return f1_score(labels, predictions, average='micro')
