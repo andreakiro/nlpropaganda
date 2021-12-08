@@ -117,7 +117,13 @@ class SpanIdentifier(Model):
 
         # Shape: (batch_size, num_spans_propaganda, 1)
         logits = self._classifier(span_embeddings)
+        logger.info(f'LOGITS BEFORE CLAMP: {logits}')
+        
+        logits = torch.clamp(logits, min=-1000, max=1000)
         probs = torch.sigmoid(logits)
+
+        logger.info(f'SIZE: {probs.size()}')
+        # logger.info(f'PROBS: {probs}')
 
         # Shape: (batch_size, num_spans_propaganda, 2)
         mask = probs >= 0.5
@@ -142,7 +148,7 @@ class SpanIdentifier(Model):
                                 break
             
             self._metrics(si_spans, gold_spans)
-            output_dict['si-metric'] = self._metrics.get_metric()["si-metric"]
+            # output_dict['si-metric'] = self._metrics.get_metric()["si-metric"]
             output_dict["loss"] = F.binary_cross_entropy(probs, target)
 
         return output_dict

@@ -69,7 +69,8 @@ class SpanIdentificationReader(DatasetReader):
         if gold_spans is not None:
             gold_spans_in_token_space = self._map_to_token_space(content, gold_spans, tokens)
             list_gold_span_fields: List[SpanField] = [SpanField(start, end, article_field) for start, end in gold_spans_in_token_space]
-            fields["gold_spans"] = ListField(list_gold_span_fields) if len(list_gold_span_fields) != 0 else ListField([article_field]).empty_field()
+            dummy : SpanField = SpanField(-1, -1, article_field).empty_field()
+            fields["gold_spans"] = ListField(list_gold_span_fields) if len(list_gold_span_fields) != 0 else ListField([dummy]).empty_field()
 
         # Extract article spans and add them to instance
         spans = enumerate_spans(tokens, max_span_width=self._max_span_width)
