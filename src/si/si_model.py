@@ -10,6 +10,7 @@ from allennlp.models.model import Model
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, EndpointSpanExtractor
+
 from src.si.si_metric import SpanIdenficationMetric
 
 logger = logging.getLogger(__name__)
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 @Model.register("span-identifier")
 class SpanIdentifier(Model):
     """
-    This model implements the propaganda spans identification task
+    This model implements the propaganda spans identification (SI) task
     from a given article and it's corresponding propaganda spans labels.
 
     # Parameters
@@ -34,6 +35,7 @@ class SpanIdentifier(Model):
     classifier: `torch.nn` optional.
         PyTorch Neural Network model to perform span identification task.
     """
+
     def __init__(
         self,
         vocab: Vocabulary,
@@ -44,66 +46,77 @@ class SpanIdentifier(Model):
         classifier: torch.nn = None,
         **kwargs
     ) -> None:
-        logger.info("Initializing SpanIdentifier Model")
         super().__init__(vocab, **kwargs)
+        logger.info("Initializing SpanIdentifier (SI) model...")
 
+        # Define text embedder and encoder
         self._text_field_embedder = text_field_embedder
         self._context_layer = context_layer
-        self._metrics = SpanIdenficationMetric()
 
+        # Define first span extractor
         self._endpoint_span_extractor = EndpointSpanExtractor(
             context_layer.get_output_dim(),
-            combination = "x,y",
-            num_width_embeddings = max_span_width,
-            span_width_embedding_dim = feature_size,
-            bucket_widths = False,
+            combination="x,y",
+            num_width_embeddings=max_span_width,
+            span_width_embedding_dim=feature_size,
+            bucket_widths=False,
         )
 
+        # Define second span extractor
         self._attentive_span_extractor = SelfAttentiveSpanExtractor(
-            input_dim = text_field_embedder.get_output_dim()
+            input_dim=text_field_embedder.get_output_dim()
         )
 
+        # Define SI model metric
+        self._metrics = SpanIdenficationMetric()
+
+        # Define classifier architecture
         ese_output_dim = self._endpoint_span_extractor.get_output_dim()
         ase_output_dim = self._attentive_span_extractor.get_output_dim()
+        input_dim = ese_output_dim + ase_output_dim
+        output_dim = 1
 
         if classifier is None:
-            input_size = ese_output_dim + ase_output_dim
-            #self._classifier = torch.nn.Linear(ese_output_dim + ase_output_dim, 1)
             self._classifier = torch.nn.Sequential(
-                nn.Linear(input_size, input_size*2),
+                nn.Linear(input_dim, input_dim*2),
                 nn.ReLU(),
-                nn.Linear(input_size*2, input_size),
+                nn.Linear(input_dim*2, input_dim),
                 nn.ReLU(),
-                nn.Linear(input_size, int(input_size*0.6)),
+                nn.Linear(input_dim, int(input_dim*0.6)),
                 nn.ReLU(),
-                nn.Linear(int(input_size*0.6), int(input_size*0.2)),
+                nn.Linear(int(input_dim*0.6), int(input_dim*0.2)),
                 nn.ReLU(),
-                nn.Linear(int(input_size*0.2), 1)
+                nn.Linear(int(input_dim*0.2), output_dim)
             )
         else:
             self._classifier = classifier
 
     def forward(
         self,  # type: ignore
-        content: TextFieldTensors,
-        all_spans: torch.IntTensor,
-        gold_spans: torch.IntTensor = None,
+        batch_content: TextFieldTensors,
+        batch_all_spans: torch.IntTensor,
+        batch_gold_spans: torch.IntTensor = None,
         metadata: List[Dict[str, int]] = None,
     ) -> Dict[str, torch.Tensor]:
         """
         # Parameters
-        content: `TextFieldTensors` required.
+        batch_content: `TextFieldTensors` required.
             Batch of article's contents under textual format.
-        all_spans: `torch.IntTensor` required.
+        batch_all_spans: `torch.IntTensor` required.
             Batch of all spans retrieved by our DatasetReader
             on which we have to perform binary classification.
-        gold_spans: `torch.IntTensor` required.
+        batch_gold_spans: `torch.IntTensor` required.
             Batch of gold spans i.e. the ground truth spans
             labelled as propaganda in the corresponding article.
+        metadata: `List[Dict[str, int]]` optional.
+            Metadata field containg information about weights
+            to deal with important class inbalance of dataset.
 
         # Returns
         An output dictionary consisting of:
-        si-spans: `torch.IntTensor` always.
+        all_spans: `torch.IntTensor` always.
+            Batch of all spans extracted from our dataset.
+        si_spans: `torch.IntTensor` always.
             Batch of spans classified as propaganda by our model.
         probs-spans: `torch.IntTensor` always.
             Probability overview for every spans given as input.
@@ -111,62 +124,87 @@ class SpanIdentifier(Model):
             A scalar loss to be optimised when training.
         """
         # Shape: (batch_size, article_length, embedding_size)
-        text_embeddings = self._text_field_embedder(content)
+        text_embeddings = self._text_field_embedder(batch_content)
 
         # Shape: (batch_size, article_length)
-        text_mask = util.get_text_field_mask(content)
+        text_mask = util.get_text_field_mask(batch_content)
 
         # Shape: (batch_size, num_spans, 2)
-        spans = F.relu(all_spans.float()).long()
+        batch_all_spans = F.relu(batch_all_spans.float()).long()
 
         # Shape: (batch_size, article_length, encoding_dim)
         contextualized_embeddings = self._context_layer(text_embeddings, text_mask)
         # Shape: (batch_size, num_spans, 2 * encoding_dim + feature_size)
-        endpoint_span_embeddings = self._endpoint_span_extractor(contextualized_embeddings, spans)
+        endpoint_span_embeddings = self._endpoint_span_extractor(contextualized_embeddings, batch_all_spans)
         # Shape: (batch_size, num_spans, embedding_size)
-        attended_span_embeddings = self._attentive_span_extractor(text_embeddings, spans)
+        attended_span_embeddings = self._attentive_span_extractor(text_embeddings, batch_all_spans)
 
         # Shape: (batch_size, num_spans, embedding_size + 2 * encoding_dim + feature_size)
         span_embeddings = torch.cat([endpoint_span_embeddings, attended_span_embeddings], -1)
 
+        # Compute logits and probabilities
         # Shape: (batch_size, num_spans, 1)
         logits = self._classifier(span_embeddings)
-        logits = torch.clamp(logits, min=-1000, max=1000)
+        logits = torch.clamp(logits, min=-1e04, max=1e04)
         probs = torch.sigmoid(logits)
 
-        # Shape: (batch_size, num_spans_propaganda, 2)
+        # Create mask to filter spans
         mask = probs >= 0.5
         mask = torch.stack((mask, mask), dim=2)
+        # Shape: (batch_size, num_spans_propaganda, 2)
         mask = mask.reshape(mask.shape[0], mask.shape[1], 2)
-        si_spans = torch.masked_select(spans, mask).reshape(spans.shape[0], -1, 2)
+
+        # SI model prediction on propaganda spans
+        batch_si_spans = torch.masked_select(batch_all_spans, mask)
+        batch_si_spans = batch_si_spans.reshape(batch_all_spans.shape[0], -1, 2)
 
         output_dict = {
-            "all-spans": spans,
-            "si-spans": si_spans,
-            "probs-spans": probs,
+            "all_spans": batch_all_spans,
+            "si_spans": batch_si_spans,
+            "probs_spans": probs,
         }
 
-        if gold_spans is not None:
-            target = torch.zeros(probs.shape, dtype=torch.float)
-            for i, b_spans in enumerate(spans):
-                if gold_spans.numel() > 0:
-                    b_gold_spans = gold_spans[i]
-                    for j, span in enumerate(b_spans):
-                        for gold_span in b_gold_spans:
-                            if span[0] == gold_span[0] and span[1] == gold_span[1]:
-                                target[i][j] = 1
-                                break
+        if batch_gold_spans is not None:
+            # During training mode
+            weights = self._get_weights(metadata)
+            target = self._get_target(probs, batch_all_spans, batch_gold_spans)
 
-            sum_spans = sum([data["num_spans"] for data in metadata])
-            sum_gold_spans = sum([data["num_gold_spans"] for data in metadata])
-            if sum_gold_spans == 0:
-                sum_gold_spans = 1
-
-            self._metrics(si_spans, gold_spans)
-            weight = torch.tensor([(sum_spans + sum_gold_spans) / sum_gold_spans])
-            output_dict["loss"] = F.binary_cross_entropy_with_logits(logits, target, pos_weight=weight)
+            # Compute SI metric and BCE loss
+            self._metrics(batch_si_spans, batch_gold_spans)
+            output_dict["loss"] = F.binary_cross_entropy_with_logits(logits, target, pos_weight=weights)
 
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return self._metrics.get_metric(reset)
+
+    def _get_target(
+        self,
+        probs: torch.FloatTensor,
+        batch_all_spans: torch.IntTensor,
+        batch_gold_spans: torch.IntTensor,
+    ) -> torch.FloatTensor:
+        target = torch.zeros(probs.shape, dtype=torch.float)
+        for i, spans in enumerate(batch_all_spans):
+            if batch_gold_spans.numel() == 0:
+                continue
+            gold_spans = batch_gold_spans[i]
+            for j, span in enumerate(spans):
+                for gold_span in gold_spans:
+                    if span[0] == gold_span[0] and span[1] == gold_span[1]:
+                        target[i][j] = 1
+                        break
+        return target
+
+    def _get_weights(
+        self,
+        metadata: List[Dict[str, int]]
+    ) -> torch.FloatTensor:
+        sum_spans = sum([data["num_all_spans"] for data in metadata])
+        sum_gold_spans = sum([data["num_gold_spans"] for data in metadata])
+
+        # Dirty fix
+        if sum_gold_spans == 0:
+            sum_gold_spans = 1
+
+        return torch.tensor([(sum_spans + sum_gold_spans) / sum_gold_spans])

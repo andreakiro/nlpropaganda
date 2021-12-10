@@ -1,7 +1,8 @@
 local bert_model = "bert-base-uncased";
 local max_length = 128;
 local bert_dim = 768;
-local lstm_dim = 200; 
+local lstm_dim = 200;
+local batch_size = 1;
 
 {
     "dataset_reader" : {
@@ -41,9 +42,9 @@ local lstm_dim = 200;
     "data_loader": {
         "batch_sampler": {
             "type": "bucket",
-            "sorting_keys": ["content"],
+            "sorting_keys": ["batch_content"],
             "padding_noise": 0.0,
-            "batch_size": 1
+            "batch_size": batch_size,
         }
     },
     "trainer": {
