@@ -1,9 +1,12 @@
 # NL—Propaganda
 Main repo for ETHZ Natural Language Processing course project.
 
+## Logs models results
+- [Logs models results](models/logmodels.csv)
+
 ## Latex editable documents
-- [Project proposal paper](https://www.overleaf.com/6931691827vgjtshtbyrbp) 
-- [Project paper](https://www.overleaf.com/8789365945bcnsfwsyzqdk)
+- [Project proposal paper](papers/proposal/nlpropaganda-proposal.pdf)
+- [Project progress report paper](https://www.overleaf.com/8789365945bcnsfwsyzqdk)
 
 ## Running the models
 ```

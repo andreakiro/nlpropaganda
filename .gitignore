@@ -12,5 +12,5 @@ __pycache__/
 **/.config
 
 # WIP Serialized models
-models/
+models/model*/
 data*/
