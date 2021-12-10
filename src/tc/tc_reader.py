@@ -5,9 +5,10 @@ from allennlp.models.model import Model
 
 from overrides import overrides
 
-from src.utils import label_to_int, get_not_propaganda
+from src.utils import filter_function, label_to_int, get_not_propaganda
 
 import torch
+import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
 from allennlp.data.dataset_readers.dataset_utils.span_utils import enumerate_spans
@@ -107,25 +108,34 @@ class TechniqueClassificationReader(DatasetReader):
         fields["content"] = article_field
 
         # Extract article spans and add them to instance
-        all_spans = enumerate_spans(tokens, max_span_width = self._max_span_width)
+        all_spans = enumerate_spans(tokens, max_span_width = self._max_span_width, filter_function=filter_function)
+        spans_field = ListField([SpanField(start, end, article_field) for start, end in all_spans])
 
-        #TODO Prune spans by using heuristics
-        pruned_spans = all_spans
-        spans_field = ListField([SpanField(start, end, article_field) for start, end in pruned_spans])
-
+        # Call SI model to get si-spans
         inst = Instance({'content': article_field, 'all_spans': spans_field})
-        si_spans = self._si_model.forward_on_instance(inst)["si-spans"]
+        si_output = self._si_model.forward_on_instance(inst)
+        si_spans = torch.as_tensor(si_output["all-spans"])
+        si_probs = torch.as_tensor(si_output["probs-spans"])
+
+        mask = si_probs >= 0.01
+        mask = torch.stack((mask, mask), dim=1).reshape(mask.shape[0], 2)
+        filtered_spans = torch.masked_select(si_spans, mask).reshape(-1, 2)
+
+
+        if filtered_spans.shape[0] == 0:
+            argmax = torch.argmax(si_probs)
+            filtered_spans = si_spans[argmax].reshape(-1, 2)
+
+        logger.info(f"FILTERED: {filtered_spans}")
+        logger.info(f"FILTERED: {filtered_spans.shape}")
 
         # Add si-spans to our field dict
-        dummy: SpanField = SpanField(-1, -1, article_field).empty_field()
-        fields["si_spans"] = ListField([SpanField(start, end, article_field) for start, end in si_spans]) if len(si_spans) != 0 else ListField([dummy]).empty_field()
+        fields["si_spans"] = ListField([SpanField(start.item(), end.item(), article_field) for start, end in filtered_spans])
 
         if gold_label_spans is not None:
             # Add gold-spans to our field dict
-            labels = self._get_labels(si_spans, gold_label_spans)
-            fields["gold_labels"] = ListField([LabelField(label, skip_indexing=True) for label in labels]) if len(labels) != 0 else ListField([LabelField(-1, skip_indexing=True).empty_field()]).empty_field() 
-            # fields["gold_spans"] = SequenceLabelField(labels, fields["si_spans"]) if len(si_spans) != 0 else SequenceLabelField([], ListField([SpanField(-1,-1,article_field).empty_field()]).empty_field()).empty_field()
-            # fields["gold_spans"] = SequenceLabelField(labels, fields["si_spans"]) if len(si_spans) != 0 else SequenceLabelField([], article_field.empty_field()).empty_field()
+            labels = self._get_labels(filtered_spans, gold_label_spans)
+            fields["gold_labels"] = ListField([LabelField(label, skip_indexing=True) for label in labels])
 
         return Instance(fields)
 

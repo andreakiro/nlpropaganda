@@ -16,7 +16,7 @@ local lstm_dim = 200;
         "max_span_width": 20,
         "si_model": {
             "type": "from_archive",
-            "archive_file": "models/models_si/model54/model.tar.gz"
+            "archive_file": "models/models_si/model56/model.tar.gz"
         },
     },
     "train_data_path": "data/train-tc",

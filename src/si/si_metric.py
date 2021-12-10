@@ -22,12 +22,12 @@ class SpanIdenficationMetric(Metric):
             
     def __call__(self, prop_spans: torch.Tensor, gold_spans: torch.Tensor, mask: Optional[torch.BoolTensor] = None):
         for i, article_spans in enumerate(prop_spans):
+            article_gold_spans = gold_spans[i]
+            self._t_cardinality += article_gold_spans.size(dim=0)
             if article_spans.numel() == 0:
                 continue
-            article_gold_spans = gold_spans[i]
             merged_prop_spans = self._merge_intervals(article_spans)
             self._s_cardinality += merged_prop_spans.size(dim=0)
-            self._t_cardinality += article_gold_spans.size(dim=0)
             for combination in itertools.product(merged_prop_spans, article_gold_spans):
                 sspan = combination[0]
                 tspan = combination[1]

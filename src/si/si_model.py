@@ -1,5 +1,5 @@
 import logging
-from typing import Dict
+from typing import Dict, List
 
 import torch
 import torch.nn.functional as F
@@ -75,6 +75,7 @@ class SpanIdentifier(Model):
         content: TextFieldTensors,
         all_spans: torch.IntTensor,
         gold_spans: torch.IntTensor = None,
+        metadata: List[Dict[str, int]] = None,
     ) -> Dict[str, torch.Tensor]:
         """
         # Parameters
@@ -115,15 +116,10 @@ class SpanIdentifier(Model):
         # Shape: (batch_size, num_spans, embedding_size + 2 * encoding_dim + feature_size)
         span_embeddings = torch.cat([endpoint_span_embeddings, attended_span_embeddings], -1)
 
-        # Shape: (batch_size, num_spans_propaganda, 1)
+        # Shape: (batch_size, num_spans, 1)
         logits = self._classifier(span_embeddings)
-        logger.info(f'LOGITS BEFORE CLAMP: {logits}')
-        
         logits = torch.clamp(logits, min=-1000, max=1000)
         probs = torch.sigmoid(logits)
-
-        logger.info(f'SIZE: {probs.size()}')
-        # logger.info(f'PROBS: {probs}')
 
         # Shape: (batch_size, num_spans_propaganda, 2)
         mask = probs >= 0.5
@@ -132,6 +128,7 @@ class SpanIdentifier(Model):
         si_spans = torch.masked_select(spans, mask).reshape(spans.shape[0], -1, 2)
 
         output_dict = {
+            "all-spans": spans,
             "si-spans": si_spans,
             "probs-spans": probs,
         }
@@ -146,10 +143,13 @@ class SpanIdentifier(Model):
                             if span[0] == gold_span[0] and span[1] == gold_span[1]:
                                 target[i][j] = 1
                                 break
-            
+
+            sum_spans = sum([data["num_spans"] for data in metadata])
+            sum_gold_spans = sum([data["num_gold_spans"] for data in metadata])
+            weight = torch.tensor(1 - (sum_gold_spans / (sum_spans + sum_gold_spans)))
+
             self._metrics(si_spans, gold_spans)
-            # output_dict['si-metric'] = self._metrics.get_metric()["si-metric"]
-            output_dict["loss"] = F.binary_cross_entropy(probs, target)
+            output_dict["loss"] = F.binary_cross_entropy(probs, target, weight=weight)
 
         return output_dict
 

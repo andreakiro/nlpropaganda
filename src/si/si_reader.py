@@ -11,6 +11,9 @@ from allennlp.data import DatasetReader, Instance
 from allennlp.data.fields import Field, ListField, TextField, SpanField
 from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer
+from allennlp.data.fields.metadata_field import MetadataField
+
+from src.utils import filter_function
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +62,7 @@ class SpanIdentificationReader(DatasetReader):
     @overrides
     def text_to_instance(self, content: str, gold_spans: List[Tuple[int, int]] = None) -> Instance:
         fields: Dict[str, Field] = {}
+        metadata: Dict[str, int] = {}
 
         # Create the TextField for the article
         tokens: List[Token] = self.tokenizer.tokenize(content)
@@ -71,13 +75,16 @@ class SpanIdentificationReader(DatasetReader):
             list_gold_span_fields: List[SpanField] = [SpanField(start, end, article_field) for start, end in gold_spans_in_token_space]
             dummy : SpanField = SpanField(-1, -1, article_field).empty_field()
             fields["gold_spans"] = ListField(list_gold_span_fields) if len(list_gold_span_fields) != 0 else ListField([dummy]).empty_field()
+            metadata["num_gold_spans"] = len(list_gold_span_fields)
 
         # Extract article spans and add them to instance
-        spans = enumerate_spans(tokens, max_span_width=self._max_span_width)
+        spans = enumerate_spans(tokens, max_span_width=self._max_span_width, filter_function=filter_function)
         list_span_fields: List[SpanField] = [SpanField(start, end, article_field) for start, end in spans]
+        metadata["num_spans"] = len(list_span_fields)
         
         #TODO Prune spans, by using heuristics
         fields["all_spans"] = ListField(list_span_fields)
+        fields["metadata"] = MetadataField(metadata)
 
         return Instance(fields)
 

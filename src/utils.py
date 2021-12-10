@@ -1,3 +1,7 @@
+from typing import List
+
+from allennlp.data.tokenizers.token_class import Token
+
 labels = {
     'Not_Propaganda': 0,
     'Loaded_Language': 1,
@@ -27,3 +31,6 @@ def int_to_label(i):
 
 def get_not_propaganda():
     return labels['Not_Propaganda']
+
+def filter_function(span_tokens: List[Token]):
+    return not all([t.pos_ == "DET" or t.pos_ == "PUNCT" or t.pos_ == "EOL" or t.pos_ == "SPACE" for t in span_tokens])

@@ -94,12 +94,6 @@ class TechniqueClassifier(Model):
         loss: `torch.FloatTensor` optional
             A scalar loss to be optimised when training.
         """
-        
-        logger.info(f"SI SPANS: {si_spans}")
-        # batch not considered
-        if si_spans[0][0][0] == -1:
-            return {"loss": F.binary_cross_entropy(torch.tensor([1]),torch.tensor([1]))}
-
         # Shape: (batch_size, article_length, embedding_size)
         text_embeddings = self._text_field_embedder(content)
 
@@ -135,33 +129,14 @@ class TechniqueClassifier(Model):
         }
 
         if gold_labels is not None:
-            #self._metrics(pred_labels, gold_labels)
-            logger.info(f'SIZE OF LOGITS: {logits.shape}')
-            logger.info(f'SIZE OF GOLD LABELS: {gold_labels.shape}')
-            logger.info(f'SIZE OF LOGITS FLATTENED: {torch.flatten(logits, end_dim=1).shape}')
-            logger.info(f'SIZE OF GOLD LABELS FLATTENED: {torch.flatten(gold_labels).shape}')
+            # self._metrics(pred_labels, gold_labels)
+            # logger.info(f'SIZE OF LOGITS: {logits.shape}')
+            # logger.info(f'SIZE OF GOLD LABELS: {gold_labels.shape}')
+            # logger.info(f'SIZE OF LOGITS FLATTENED: {torch.flatten(logits, end_dim=1).shape}')
+            # logger.info(f'SIZE OF GOLD LABELS FLATTENED: {torch.flatten(gold_labels).shape}')
             output_dict["loss"] = F.cross_entropy(torch.flatten(logits, end_dim=1), torch.flatten(gold_labels))        
         
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         return self._metrics.get_metric(reset)
-    
-    # def _compute_loss(
-    #     self, 
-    #     labels: torch.IntTensor,
-    #     predictions: torch.IntTensor,
-    # ) -> float:
-    #     """
-    #     # Parameters
-    #     label: `torch.IntTensor` required.
-    #         Ground truth label (propaganda technique) for a given span.
-    #     prediction: `torch.IntTensor` required.
-    #         Model propaganda technique prediction for a given span.
-        
-    #     # Returns
-    #     score: `float` always
-    #         sklean F1 score `float`
-    #     """
-        #return F.cross_entropy()
-        #return f1_score(labels, predictions, average='micro')
