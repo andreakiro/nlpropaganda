@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List
 
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 from allennlp.nn import util
@@ -66,7 +67,19 @@ class SpanIdentifier(Model):
         ase_output_dim = self._attentive_span_extractor.get_output_dim()
 
         if classifier is None:
-            self._classifier = torch.nn.Linear(ese_output_dim + ase_output_dim, 1)
+            input_size = ese_output_dim + ase_output_dim
+            #self._classifier = torch.nn.Linear(ese_output_dim + ase_output_dim, 1)
+            self._classifier = torch.nn.Sequential(
+                nn.Linear(input_size, input_size*2),
+                nn.ReLU(),
+                nn.Linear(input_size*2, input_size),
+                nn.ReLU(),
+                nn.Linear(input_size, int(input_size*0.6)),
+                nn.ReLU(),
+                nn.Linear(int(input_size*0.6), int(input_size*0.2)),
+                nn.ReLU(),
+                nn.Linear(int(input_size*0.2), 1)
+            )
         else:
             self._classifier = classifier
 
@@ -146,10 +159,12 @@ class SpanIdentifier(Model):
 
             sum_spans = sum([data["num_spans"] for data in metadata])
             sum_gold_spans = sum([data["num_gold_spans"] for data in metadata])
-            weight = torch.tensor(1 - (sum_gold_spans / (sum_spans + sum_gold_spans)))
+            if sum_gold_spans == 0:
+                sum_gold_spans = 1
 
             self._metrics(si_spans, gold_spans)
-            output_dict["loss"] = F.binary_cross_entropy(probs, target, weight=weight)
+            weight = torch.tensor([(sum_spans + sum_gold_spans) / sum_gold_spans])
+            output_dict["loss"] = F.binary_cross_entropy_with_logits(logits, target, pos_weight=weight)
 
         return output_dict
 
