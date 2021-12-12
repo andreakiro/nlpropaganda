@@ -83,11 +83,10 @@ class SpanIdentificationReader(DatasetReader):
         # Extract article spans and add them to instance
         spans = enumerate_spans(tokens, max_span_width=self._max_span_width, filter_function=filter_function)
         span_fields: List[SpanField] = [SpanField(start, end, article_field) for start, end in spans]
+        fields["batch_all_spans"] = ListField(span_fields)
 
         metadata["num_all_spans"] = len(span_fields)
         metadata["article_id"] = article_id
-        metadata["tokens"] = tokens
-        fields["batch_all_spans"] = ListField(span_fields)
         fields["metadata"] = MetadataField(metadata)
 
         return Instance(fields)

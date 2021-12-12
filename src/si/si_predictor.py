@@ -13,15 +13,14 @@ class SpanIdentificationPredictor(Predictor):
         self, 
         instance: Instance
     ) -> JsonDict:
+        article_tokens = instance["batch_content"]
         output_dict = self._model.forward_on_instance(instance)
         article_id = output_dict["metadata"]["article_id"]
-        si_tokens = output_dict["si_tokens"] # BUG
-
-        logger.info(output_dict.keys())
-        logger.info(output_dict["metadata"].keys())
+        si_spans = output_dict["si_spans"]
 
         with open('submissions/output' + str(1) + ".txt", 'a') as file:
-            for tokens in si_tokens:
-                file.write(f"{article_id}\t{tokens[0].idx}\t{tokens[-1].idx_end}")
+            for start, end in si_spans:
+                file.write(f"{article_id}\t{article_tokens[start].idx}\t{article_tokens[end].idx_end}\n")
 
-        return super().predict_instance(instance)
+        return None
+        # return super().predict_instance(instance)

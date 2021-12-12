@@ -1,8 +1,11 @@
-from typing import Optional
+from typing import Dict, List, Optional, Tuple
 
 import logging
 import torch
 import itertools
+
+import numpy as np
+
 from allennlp.training.metrics.metric import Metric
 
 logger = logging.getLogger(__name__)
@@ -20,34 +23,49 @@ class SpanIdenficationMetric(Metric):
         self._s_sum = 0
         self._t_sum = 0
 
-    def __call__(self, prop_spans: torch.Tensor, gold_spans: torch.Tensor, mask: Optional[torch.BoolTensor] = None):
-        for i, article_spans in enumerate(prop_spans):
-            article_gold_spans = gold_spans[i]
-            self._t_cardinality += article_gold_spans.size(dim=0)
-            if article_spans.numel() == 0:
+    def __call__(
+        self,
+        prop_spans: torch.Tensor, 
+        gold_spans: torch.Tensor, 
+        mask: Optional[torch.BoolTensor] = None
+    ) -> None:
+        for i in enumerate(prop_spans.size(dim=0)):
+            article_spans = prop_spans[i].numpy()
+            article_gold_spans = gold_spans[i].numpy()
+
+            self._t_cardinality += article_gold_spans.shape[0]
+            if article_spans.shape[0] == 0:
                 continue
-            merged_prop_spans = self._merge_intervals(article_spans)
-            self._s_cardinality += merged_prop_spans.size(dim=0)
+            merged_prop_spans = self._merge_spans(article_spans)
+            self._s_cardinality += len(merged_prop_spans)
+
             for combination in itertools.product(merged_prop_spans, article_gold_spans):
                 sspan = combination[0]
                 tspan = combination[1]
-                self._s_sum += self._c_function(sspan, tspan,
-                                                sspan[1].item() - sspan[0].item() + 1)
-                self._t_sum += self._c_function(sspan, tspan,
-                                                tspan[1].item() - tspan[0].item() + 1)
+                self._s_sum += self._c_function(sspan, tspan, sspan[1] - sspan[0] + 1)
+                self._t_sum += self._c_function(sspan, tspan, tspan[1] - tspan[0] + 1)
 
-    def get_metric(self, reset: bool = False):
+    def get_metric(
+        self, 
+        reset: bool = False
+    ) -> Dict[str, int]:
         precision = 0
         recall = 0
         if self._s_cardinality != 0:
             precision = self._s_sum / self._s_cardinality
         if self._t_cardinality != 0:
             recall = self._t_sum / self._t_cardinality
+
         if reset:
             self.reset()
         return {"si-metric": (2 * precision * recall) / (precision + recall) if precision + recall > 0 else 0}
 
-    def _c_function(self, s, t, h):
+    def _c_function(
+        self, 
+        s: Tuple[int, int], 
+        t: Tuple[int, int], 
+        h: int
+    ) -> int:
         """
         Compute C(s,t,h)
         :param s: predicted span 
@@ -58,7 +76,11 @@ class SpanIdenficationMetric(Metric):
         intersection = self._intersect(s, t)
         return intersection / h if intersection > 0 else 0
 
-    def _intersect(self, s, t):
+    def _intersect(
+        self, 
+        s: Tuple[int, int], 
+        t: Tuple[int, int]
+    ) -> int:
         """
         Intersect two spans.
         :param s: first span
@@ -66,34 +88,27 @@ class SpanIdenficationMetric(Metric):
         :return: # of intersecting words between the spans, if < 0 represent the distance between spans, 
                  if = 0 the two words are neighbors
         """
-        start = max(s[0].item(), t[0].item())
-        end = min(s[1].item(), t[1].item())
+        start = max(s[0], t[0])
+        end = min(s[1], t[1])
         return end - start + 1
 
-    def _merge_intervals(self, prop_spans):
+    def _merge_spans(
+        self, 
+        spans: np.array
+    ) -> List[Tuple[int, int]]:
         """
         Merge overlapping spans in the given span tensor.
         :param prop_spans: spans to be merged
         :return: tensor contained only non-overlapping spans
         """
-        last = 0
-        # Sort the predicted spans by start index
-        prop_spans_sorted = torch.index_select(
-            prop_spans, 0, torch.sort(prop_spans[:, 0])[1])
-        # For each span in the sorted tensor, check for intersection with rightmost span analyzed
-        to_delete = list()
-        for index in range(1, prop_spans_sorted.size(dim=0)):
-            if (self._intersect(prop_spans_sorted[index], prop_spans_sorted[last]) < 0):
-                # add the span to the stack if it's empty or if the current span
-                # does not intersect with the last span in the stack or has not distance 1 from it
-                last += 1
-            else:
-                # current stack intersect with rightmost span analyzed
-                # update last element right index with the max between the two intersecting
-                prop_spans_sorted[last, 1] = max(
-                    prop_spans_sorted[last, 1], prop_spans_sorted[index, 1])
-                to_delete.append(index)
-
-        mask = [x not in to_delete for x in torch.arange(
-            prop_spans_sorted.size(dim=0))]
-        return prop_spans_sorted[mask]
+        # For each span in the sorted list, check for intersection with rightmost span analyzed
+        merged_spans = [spans[0]]
+        for span in spans[1:]:
+            # If the current interval does not overlap with the stack top, push it
+            if span[0] > merged_spans[-1][1]:
+                merged_spans.append((span[0], span[1]))
+            # If the current interval overlaps with stack top and ending time of current interval is more than that of stack top, 
+            # update stack top with the ending time of current interval
+            elif span[1] >  merged_spans[-1][1]:
+                merged_spans[-1] = (merged_spans[-1][0], span[1])
+        return merged_spans
