@@ -209,4 +209,4 @@ class SpanIdentifier(Model):
         if sum_gold_spans == 0:
             sum_gold_spans = 1
 
-        return torch.tensor([(sum_spans + sum_gold_spans) / sum_gold_spans])
+        return torch.tensor([sum_spans / (2 * sum_gold_spans)])

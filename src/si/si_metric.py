@@ -29,7 +29,7 @@ class SpanIdenficationMetric(Metric):
         gold_spans: torch.Tensor, 
         mask: Optional[torch.BoolTensor] = None
     ) -> None:
-        for i in enumerate(prop_spans.size(dim=0)):
+        for i in range(prop_spans.size(dim=0)):
             article_spans = prop_spans[i].numpy().tolist()
             article_gold_spans = gold_spans[i].numpy().tolist()
 
