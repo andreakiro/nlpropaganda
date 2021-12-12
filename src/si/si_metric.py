@@ -30,11 +30,11 @@ class SpanIdenficationMetric(Metric):
         mask: Optional[torch.BoolTensor] = None
     ) -> None:
         for i in enumerate(prop_spans.size(dim=0)):
-            article_spans = prop_spans[i].numpy()
-            article_gold_spans = gold_spans[i].numpy()
+            article_spans = prop_spans[i].numpy().tolist()
+            article_gold_spans = gold_spans[i].numpy().tolist()
 
-            self._t_cardinality += article_gold_spans.shape[0]
-            if article_spans.shape[0] == 0:
+            self._t_cardinality += len(article_gold_spans)
+            if len(article_spans) == 0:
                 continue
             merged_prop_spans = self._merge_spans(article_spans)
             self._s_cardinality += len(merged_prop_spans)
@@ -94,16 +94,17 @@ class SpanIdenficationMetric(Metric):
 
     def _merge_spans(
         self, 
-        spans: np.array
+        spans: List[List[int]]
     ) -> List[Tuple[int, int]]:
         """
         Merge overlapping spans in the given span tensor.
         :param prop_spans: spans to be merged
         :return: tensor contained only non-overlapping spans
         """
+        sorted_spans = sorted(spans, key=lambda l: l[0])
         # For each span in the sorted list, check for intersection with rightmost span analyzed
-        merged_spans = [spans[0]]
-        for span in spans[1:]:
+        merged_spans = [sorted_spans[0]]
+        for span in sorted_spans[1:]:
             # If the current interval does not overlap with the stack top, push it
             if span[0] > merged_spans[-1][1]:
                 merged_spans.append((span[0], span[1]))
