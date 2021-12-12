@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, List
+from allennlp.common import meta
 
 import torch
 import torch.nn as nn
@@ -158,10 +159,19 @@ class SpanIdentifier(Model):
         batch_si_spans = torch.masked_select(batch_all_spans, mask)
         batch_si_spans = batch_si_spans.reshape(batch_all_spans.shape[0], -1, 2)
 
+        # SI model prediction in tokens for human output
+        batch_si_tokens = []
+        for batch, meta in enumerate(metadata):
+            si_spans = batch_si_spans[batch]
+            for start, end in si_spans:
+                batch_si_tokens.append(meta["tokens"][int(start) : int(end) + 1])
+
         output_dict = {
             "all_spans": batch_all_spans,
             "si_spans": batch_si_spans,
+            "si_tokens": batch_si_tokens,
             "probs_spans": probs,
+            "metadata": metadata,
         }
 
         if batch_gold_spans is not None:

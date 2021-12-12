@@ -53,13 +53,15 @@ class SpanIdentificationReader(DatasetReader):
                             _, span_start, span_end = line.strip().split("\t")
                             gold_spans.append((int(span_start), int(span_end)))
 
-                yield self.text_to_instance(content, gold_spans)
+                yield self.text_to_instance(content, article.name[7:-4], gold_spans)
 
         logger.info(f"Finished reading {articles_dir}")
 
     @overrides
     def text_to_instance(
-        self, content: str,
+        self,
+        content: str,
+        article_id: int,
         gold_spans: List[Tuple[int, int]] = None
     ) -> Instance:
         fields: Dict[str, Field] = {}
@@ -83,6 +85,8 @@ class SpanIdentificationReader(DatasetReader):
         span_fields: List[SpanField] = [SpanField(start, end, article_field) for start, end in spans]
 
         metadata["num_all_spans"] = len(span_fields)
+        metadata["article_id"] = article_id
+        metadata["tokens"] = tokens
         fields["batch_all_spans"] = ListField(span_fields)
         fields["metadata"] = MetadataField(metadata)
 
