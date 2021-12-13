@@ -1,5 +1,7 @@
 from overrides import overrides
 
+import numpy as np
+
 from allennlp.common.util import JsonDict
 from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
@@ -16,7 +18,10 @@ class SpanIdentificationPredictor(Predictor):
         article_tokens = instance["batch_content"]
         output_dict = self._model.forward_on_instance(instance)
         article_id = output_dict["metadata"]["article_id"]
-        si_spans = output_dict["si_spans"]
+
+        probs = np.asarray(output_dict["si_probs"])
+        all_spans = np.asarray(output_dict["all_spans"])
+        si_spans = all_spans[probs > 0.9]
 
         with open('submissions/output' + str(1) + ".txt", 'a') as file:
             for start, end in si_spans:
