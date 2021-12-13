@@ -2,3 +2,5 @@ ID task, ID model, Desc., training loss, validation loss, training metric, valid
 SI, model123, +Weighted BCE loss, 0.441, 0.331, 0.450, 0.336, 1, 1:19:35
 SI, model124, +MLP classifier, 0.510, 0.343, 0.466, 0.350, 1, 1:19:50
 TC, model999, First entire run, 0.021, 0.001, 0.998, 1.000, 1, 0:25:34
+SI, model457, + 8 epochs training, 0.038, 3.284, 0.717, 0.572, 8, 8:57:52
+SI, model2005, metric class updated, 0.031, 1.362, 0.380, 0.334, 8, 8:49:25
