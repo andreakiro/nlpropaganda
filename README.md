@@ -33,7 +33,7 @@ OPENBLAS="$(brew --prefix openblas)" pip install scipy
 # install sklearn (required for allennlp)
 OPENBLAS="$(brew --prefix openblas)" pip install sklearn
 
-# install Rust compiler (required for transformers)
+# install Rust compiler (required for transformers)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 pip install setuptools_rust
 
@@ -56,4 +56,40 @@ pip install sentencepiece
 # install allennlp (finally)
 pip install allennlp
 pip install allennlp-models
+```
+
+## ETH Euler cluster setup
+```
+# connect to cluster
+ssh creds@euler.ethz.ch
+
+# install miniconda
+wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+sh miniconda.sh
+rm miniconda.sh
+
+# disable base env.
+conda config --set auto_activate_base false
+
+# create new env.
+conda create --name env_name python=3.8
+conda activate env_name
+
+# install torch
+pip install torch
+
+# install allennlp
+pip install allennlp
+pip install allennlp-models
+
+# clone GitHub repo
+git clone https://github.com/andreakiro/nlpropaganda
+```
+
+## Running long processes off-line
+You can start a long running process in cluster background and than exit it:
+```
+# e-g. for training allennlp models
+$ nohup long-running-process &
+$ exit
 ```
