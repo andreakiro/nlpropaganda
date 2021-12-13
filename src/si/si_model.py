@@ -1,10 +1,11 @@
 import logging
 from typing import Dict, List
-from allennlp.common import meta
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+import numpy as np
 
 from allennlp.nn import util
 from allennlp.models.model import Model
@@ -209,4 +210,4 @@ class SpanIdentifier(Model):
         if sum_gold_spans == 0:
             sum_gold_spans = 1
 
-        return torch.tensor([sum_spans / (2 * sum_gold_spans)])
+        return torch.tensor([np.sqrt(sum_spans / sum_gold_spans)])
