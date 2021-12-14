@@ -30,8 +30,8 @@ class SpanIdenficationMetric(Metric):
         mask: Optional[torch.BoolTensor] = None
     ) -> None:
         for i in range(prop_spans.size(dim=0)):
-            article_spans = prop_spans[i].numpy().tolist()
-            article_gold_spans = gold_spans[i].numpy().tolist()
+            article_spans = prop_spans[i].tolist()
+            article_gold_spans = gold_spans[i].tolist()
 
             self._t_cardinality += len(article_gold_spans)
             if len(article_spans) == 0:

@@ -187,7 +187,7 @@ class SpanIdentifier(Model):
         batch_all_spans: torch.IntTensor,
         batch_gold_spans: torch.IntTensor,
     ) -> torch.FloatTensor:
-        target = torch.zeros(probs.shape, dtype=torch.float)
+        target = torch.zeros(probs.shape, dtype=torch.float).cuda()
         for i, spans in enumerate(batch_all_spans):
             if batch_gold_spans.numel() == 0:
                 continue
@@ -210,4 +210,4 @@ class SpanIdentifier(Model):
         if sum_gold_spans == 0:
             sum_gold_spans = 1
 
-        return torch.tensor([np.sqrt(sum_spans / sum_gold_spans)])
+        return torch.tensor([np.sqrt(sum_spans / sum_gold_spans)]).cuda()
