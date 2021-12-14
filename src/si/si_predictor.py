@@ -19,7 +19,7 @@ class SpanIdentificationPredictor(Predictor):
         output_dict = self._model.forward_on_instance(instance)
         article_id = output_dict["metadata"]["article_id"]
 
-        probs = np.asarray(output_dict["si_probs"])
+        probs = np.asarray(output_dict["probs_spans"])
         all_spans = np.asarray(output_dict["all_spans"])
         si_spans = all_spans[probs > 0.9]
 
