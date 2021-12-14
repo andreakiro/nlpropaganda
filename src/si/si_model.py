@@ -132,7 +132,7 @@ class SpanIdentifier(Model):
         text_mask = util.get_text_field_mask(batch_content)
 
         # Shape: (batch_size, num_spans, 2)
-        batch_all_spans = F.relu(batch_all_spans.float()).long()
+        #batch_all_spans = F.relu(batch_all_spans.float()).int()
 
         # Shape: (batch_size, article_length, encoding_dim)
         contextualized_embeddings = self._context_layer(text_embeddings, text_mask)
@@ -150,29 +150,27 @@ class SpanIdentifier(Model):
         logits = torch.clamp(logits, min=-1e04, max=1e04)
         probs = torch.sigmoid(logits)
 
-        # Create mask to filter spans
-        mask = probs >= 0.5
-        mask = torch.stack((mask, mask), dim=2)
-        # Shape: (batch_size, num_spans_propaganda, 2)
-        mask = mask.reshape(mask.shape[0], mask.shape[1], 2)
-
-        # SI model prediction on propaganda spans
-        batch_si_spans = torch.masked_select(batch_all_spans, mask)
-        batch_si_spans = batch_si_spans.reshape(batch_all_spans.shape[0], -1, 2)
-
         output_dict = {
             "all_spans": batch_all_spans,
-            "si_spans": batch_si_spans,
             "probs_spans": probs,
             "metadata": metadata,
         }
 
         if batch_gold_spans is not None:
-            # During training mode
+            # Compute SI metric and BCE loss
             weights = self._get_weights(metadata)
             target = self._get_target(probs, batch_all_spans, batch_gold_spans)
+            
+            # Create mask to filter spans
+            mask = probs >= 0.5
+            mask = torch.stack((mask, mask), dim=2)
+            # Shape: (batch_size, num_spans_propaganda, 2)
+            mask = mask.reshape(mask.shape[0], mask.shape[1], 2)
 
-            # Compute SI metric and BCE loss
+            # SI model prediction on propaganda spans
+            batch_si_spans = torch.masked_select(batch_all_spans, mask)
+            batch_si_spans = batch_si_spans.reshape(batch_all_spans.shape[0], -1, 2)
+
             self._metrics(batch_si_spans, batch_gold_spans)
             output_dict["loss"] = F.binary_cross_entropy_with_logits(logits, target, pos_weight=weights)
 
@@ -187,7 +185,7 @@ class SpanIdentifier(Model):
         batch_all_spans: torch.IntTensor,
         batch_gold_spans: torch.IntTensor,
     ) -> torch.FloatTensor:
-        target = torch.zeros(probs.shape, dtype=torch.float).cuda()
+        target = torch.zeros(probs.shape, dtype=torch.uint8).cuda()
         for i, spans in enumerate(batch_all_spans):
             if batch_gold_spans.numel() == 0:
                 continue

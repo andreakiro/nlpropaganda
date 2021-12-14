@@ -61,7 +61,11 @@ class SpanIdenficationMetric(Metric):
 
         if reset:
             self.reset()
-        return {"si-metric": (2 * precision * recall) / (precision + recall) if precision + recall > 0 else 0}
+        return {
+            "si-metric": (2 * precision * recall) / (precision + recall) if precision + recall > 0 else 0,
+            "precision": precision,
+            "recall": recall
+        }
 
     def _c_function(
         self, 
