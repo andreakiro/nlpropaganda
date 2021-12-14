@@ -86,6 +86,25 @@ pip install allennlp-models
 git clone https://github.com/andreakiro/nlpropaganda
 ```
 
+## Euler training with GPUs - interactive session
+```
+# request interactive session on a compute node
+bsub -n 2 -R "rusage[mem=32000,ngpus_excl_p=1]" -Is bash
+
+# load new software stack
+env2lmod
+
+# load modules for working with gpu computing
+module load gcc/6.3.0 python_gpu/3.8.5 eth_proxy hdf5/1.10.1
+
+# optional - might be already installed 
+pip install allennlp allennlp-models
+
+# 
+cd nlpropaganda/
+allennlp train configs/si_config_cuda.jsonnet --include-package src --serialization-dir models/models_si/model[n]
+```
+
 ## Running long processes off-line
 You can start a long running process in cluster background and than exit it:
 ```
