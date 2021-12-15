@@ -1,12 +1,12 @@
 # NL—Propaganda
 Main repo for ETHZ Natural Language Processing course project.
 
+## Project papers
+- [Project proposal](papers/proposal/nlpropaganda-proposal.pdf)
+- [Project progress report](papers/progress/nlpropaganda-progress.pdf)
+
 ## Logs models results
 - [Logs models results](models/logmodels.csv)
-
-## Latex editable documents
-- [Project proposal paper](papers/proposal/nlpropaganda-proposal.pdf)
-- [Project progress report paper](https://www.overleaf.com/8789365945bcnsfwsyzqdk)
 
 ## Running the models
 ```
@@ -100,7 +100,7 @@ module load gcc/6.3.0 python_gpu/3.8.5 eth_proxy hdf5/1.10.1
 # optional - might be already installed 
 pip install allennlp allennlp-models
 
-# 
+# train the models
 cd nlpropaganda/
 allennlp train configs/si_config_cuda.jsonnet --include-package src --serialization-dir models/models_si/model[n]
 ```
