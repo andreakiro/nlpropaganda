@@ -185,7 +185,7 @@ class SpanIdentifier(Model):
         batch_all_spans: torch.IntTensor,
         batch_gold_spans: torch.IntTensor,
     ) -> torch.FloatTensor:
-        target = torch.zeros(probs.shape, dtype=torch.uint8).cuda()
+        target = torch.zeros(probs.shape, dtype=torch.float16).cuda()
         for i, spans in enumerate(batch_all_spans):
             if batch_gold_spans.numel() == 0:
                 continue
