@@ -93,7 +93,7 @@ class TechniqueClassificationReader(DatasetReader):
                 # add assertions
                 yield self.text_to_instance(content, gold_label_spans)
         
-        logger.info(f'Finished reading {articles_dir}')
+        # logger.info(f'Finished reading {articles_dir}')
     
     @overrides
     def text_to_instance(
@@ -117,16 +117,15 @@ class TechniqueClassificationReader(DatasetReader):
         si_spans = torch.as_tensor(si_output["all-spans"])
         si_probs = torch.as_tensor(si_output["probs-spans"])
 
-        mask = si_probs >= 0.65
+        mask = si_probs >= 0.9
         mask = torch.stack((mask, mask), dim=1).reshape(mask.shape[0], 2)
         filtered_spans = torch.masked_select(si_spans, mask).reshape(-1, 2)
-
 
         if filtered_spans.shape[0] == 0:
             argmax = torch.argmax(si_probs)
             filtered_spans = si_spans[argmax].reshape(-1, 2)
 
-        logger.info(f"FILTERED: {filtered_spans.shape}")
+        # logger.info(f"FILTERED: {filtered_spans.shape}")
 
         # Add si-spans to our field dict
         fields["si_spans"] = ListField([SpanField(start.item(), end.item(), article_field) for start, end in filtered_spans])

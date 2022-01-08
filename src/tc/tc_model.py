@@ -102,22 +102,15 @@ class TechniqueClassifier(Model):
         # Shape: (batch_size, article_length)
         text_mask = util.get_text_field_mask(content)
 
-        # Shape: (batch_size, num_spans, 2)
-        spans = F.relu(si_spans.float()).long()
-
         # Shape: (batch_size, article_length, encoding_dim)
-        contextualized_embeddings = self._context_layer(
-            text_embeddings, text_mask)
+        contextualized_embeddings = self._context_layer(text_embeddings, text_mask)
         # Shape: (batch_size, num_spans, 2 * encoding_dim + feature_size)
-        endpoint_span_embeddings = self._endpoint_span_extractor(
-            contextualized_embeddings, spans)
+        endpoint_span_embeddings = self._endpoint_span_extractor(contextualized_embeddings, si_spans)
         # Shape: (batch_size, num_spans, embedding_size)
-        attended_span_embeddings = self._attentive_span_extractor(
-            text_embeddings, spans)
+        attended_span_embeddings = self._attentive_span_extractor(text_embeddings, si_spans)
 
         # Shape: (batch_size, num_spans, embedding_size + 2 * encoding_dim + feature_size)
-        span_embeddings = torch.cat(
-            [endpoint_span_embeddings, attended_span_embeddings], -1)
+        span_embeddings = torch.cat([endpoint_span_embeddings, attended_span_embeddings], -1)
 
         # Shape: (batch_size, num_spans, num_classes)
         logits = self._classifier(span_embeddings)
@@ -129,9 +122,13 @@ class TechniqueClassifier(Model):
         }
 
         if gold_labels is not None:
+            gold_labels = gold_labels.cuda()
+
             self._metrics(logits, gold_labels)
-            output_dict["loss"] = F.cross_entropy(torch.flatten(
-                logits, end_dim=1), torch.flatten(gold_labels))
+
+            gold_labels = torch.flatten(gold_labels)
+            weight = (torch.sum(gold_labels) - torch.bincount(gold_labels, minlength=15)).cuda()
+            output_dict["loss"] = F.cross_entropy(torch.flatten(logits, end_dim=1), gold_labels, weight=weight)
 
         return output_dict
 
