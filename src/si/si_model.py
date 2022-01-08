@@ -49,7 +49,7 @@ class SpanIdentifier(Model):
         **kwargs
     ) -> None:
         super().__init__(vocab, **kwargs)
-        logger.info("Initializing SpanIdentifier (SI) model...")
+        # logger.info("Initializing SpanIdentifier (SI) model...")
 
         # Define text embedder and encoder
         self._text_field_embedder = text_field_embedder
@@ -61,12 +61,13 @@ class SpanIdentifier(Model):
             combination="x,y",
             num_width_embeddings=max_span_width,
             span_width_embedding_dim=feature_size,
-            bucket_widths=False,
         )
 
         # Define second span extractor
         self._attentive_span_extractor = SelfAttentiveSpanExtractor(
-            input_dim=text_field_embedder.get_output_dim()
+            input_dim=text_field_embedder.get_output_dim(),
+            num_width_embeddings=max_span_width,
+            span_width_embedding_dim=feature_size,
         )
 
         # Define SI model metric
@@ -79,17 +80,7 @@ class SpanIdentifier(Model):
         output_dim = 1
 
         if classifier is None:
-            self._classifier = torch.nn.Sequential(
-                nn.Linear(input_dim, input_dim*2),
-                nn.ReLU(),
-                nn.Linear(input_dim*2, input_dim),
-                nn.ReLU(),
-                nn.Linear(input_dim, int(input_dim*0.6)),
-                nn.ReLU(),
-                nn.Linear(int(input_dim*0.6), int(input_dim*0.2)),
-                nn.ReLU(),
-                nn.Linear(int(input_dim*0.2), output_dim)
-            )
+            self._classifier = nn.Linear(input_dim, output_dim)
         else:
             self._classifier = classifier
 
@@ -131,9 +122,6 @@ class SpanIdentifier(Model):
         # Shape: (batch_size, article_length)
         text_mask = util.get_text_field_mask(batch_content)
 
-        # Shape: (batch_size, num_spans, 2)
-        #batch_all_spans = F.relu(batch_all_spans.float()).int()
-
         # Shape: (batch_size, article_length, encoding_dim)
         contextualized_embeddings = self._context_layer(text_embeddings, text_mask)
         # Shape: (batch_size, num_spans, 2 * encoding_dim + feature_size)
@@ -151,16 +139,12 @@ class SpanIdentifier(Model):
         probs = torch.sigmoid(logits)
 
         output_dict = {
-            "all_spans": batch_all_spans,
-            "probs_spans": probs,
+            "all-spans": batch_all_spans,
+            "probs": probs,
             "metadata": metadata,
         }
 
         if batch_gold_spans is not None:
-            # Compute SI metric and BCE loss
-            weights = self._get_weights(metadata)
-            target = self._get_target(probs, batch_all_spans, batch_gold_spans)
-            
             # Create mask to filter spans
             mask = probs >= 0.5
             mask = torch.stack((mask, mask), dim=2)
@@ -171,8 +155,12 @@ class SpanIdentifier(Model):
             batch_si_spans = torch.masked_select(batch_all_spans, mask)
             batch_si_spans = batch_si_spans.reshape(batch_all_spans.shape[0], -1, 2)
 
+            # Compute SI metric and BCE loss
+            pos_weight = self._get_weights(metadata)
+            target = self._get_target(probs, batch_all_spans, batch_gold_spans)
+
             self._metrics(batch_si_spans, batch_gold_spans)
-            output_dict["loss"] = F.binary_cross_entropy_with_logits(logits, target, pos_weight=weights)
+            output_dict["loss"] = F.binary_cross_entropy_with_logits(logits, target, pos_weight=pos_weight)
 
         return output_dict
 
@@ -185,7 +173,7 @@ class SpanIdentifier(Model):
         batch_all_spans: torch.IntTensor,
         batch_gold_spans: torch.IntTensor,
     ) -> torch.FloatTensor:
-        target = torch.zeros(probs.shape, dtype=torch.float16).cuda()
+        target = torch.zeros(probs.shape, dtype=torch.float)
         for i, spans in enumerate(batch_all_spans):
             if batch_gold_spans.numel() == 0:
                 continue
@@ -208,4 +196,4 @@ class SpanIdentifier(Model):
         if sum_gold_spans == 0:
             sum_gold_spans = 1
 
-        return torch.tensor([np.sqrt(sum_spans / sum_gold_spans)]).cuda()
+        return torch.tensor([np.sqrt(sum_spans / sum_gold_spans)])

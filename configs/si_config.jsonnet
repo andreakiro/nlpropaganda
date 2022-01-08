@@ -1,8 +1,10 @@
 local bert_model = "bert-base-uncased";
 local max_length = 128;
+local max_span_width = 10;
 local bert_dim = 768;
 local lstm_dim = 200;
 local batch_size = 1;
+local epoch = 5;
 
 {
     "dataset_reader" : {
@@ -14,7 +16,7 @@ local batch_size = 1;
                 "max_length": max_length
             }
         },
-        "max_span_width": 20
+        "max_span_width": max_span_width
     },
     "train_data_path": "data/train-si",
     "validation_data_path": "data/dev-si",
@@ -37,18 +39,18 @@ local batch_size = 1;
             "num_layers": 1
         },
         "feature_size": 20,
-        "max_span_width": 20,
+        "max_span_width": max_span_width,
     },
     "data_loader": {
+        // "max_instances_in_memory": batch_size * 4,
         "batch_sampler": {
             "type": "bucket",
-            "sorting_keys": ["batch_content"],
-            "padding_noise": 0.0,
+            "sorting_keys": ["batch_all_spans"],
             "batch_size": batch_size,
         }
     },
     "trainer": {
-        "num_epochs": 1,
+        "num_epochs": epochs,
         "grad_norm": 5.0,
         "patience" : 10,
         "learning_rate_scheduler": {
@@ -64,6 +66,6 @@ local batch_size = 1;
             "parameter_groups": [
                 [[".*transformer.*"], {"lr": 1e-5}]
             ]
-        }
+        },
     }
 }

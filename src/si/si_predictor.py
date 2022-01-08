@@ -18,10 +18,7 @@ class SpanIdentificationPredictor(Predictor):
         article_tokens = instance["batch_content"]
         output_dict = self._model.forward_on_instance(instance)
         article_id = output_dict["metadata"]["article_id"]
-
-        probs = np.asarray(output_dict["probs_spans"])
-        all_spans = np.asarray(output_dict["all_spans"])
-        si_spans = all_spans[probs > 0.9]
+        si_spans = np.asarray(output_dict["si_spans"])
 
         with open('submissions/output' + str(1) + ".txt", 'a') as file:
             for start, end in si_spans:

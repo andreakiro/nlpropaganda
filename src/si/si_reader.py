@@ -34,7 +34,7 @@ class SpanIdentificationReader(DatasetReader):
     @overrides
     def _read(self, file_path) -> Iterable[Instance]:
         articles_dir = file_path
-        logger.info(f"Starting reading {articles_dir}...")
+        # logger.info(f"Starting reading {articles_dir}...")
 
         with os.scandir(articles_dir) as articles:
             for article in articles:
@@ -55,7 +55,7 @@ class SpanIdentificationReader(DatasetReader):
 
                 yield self.text_to_instance(content, article.name[7:-4], gold_spans)
 
-        logger.info(f"Finished reading {articles_dir}")
+        # logger.info(f"Finished reading {articles_dir}")
 
     @overrides
     def text_to_instance(
@@ -83,6 +83,7 @@ class SpanIdentificationReader(DatasetReader):
         # Extract article spans and add them to instance
         spans = enumerate_spans(tokens, max_span_width=self._max_span_width, filter_function=filter_function)
         span_fields: List[SpanField] = [SpanField(start, end, article_field) for start, end in spans]
+        del spans
         fields["batch_all_spans"] = ListField(span_fields)
 
         metadata["num_all_spans"] = len(span_fields)
@@ -127,4 +128,4 @@ class SpanIdentificationReader(DatasetReader):
                     if token_id < len(tokens):
                         cur_token_size = len(tokens[token_id].text)
 
-        return [(mapping[start], mapping[end])for start, end in gold_spans]
+        return [(mapping[start], mapping[end]) for start, end in gold_spans]
