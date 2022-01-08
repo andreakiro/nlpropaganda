@@ -1,10 +1,16 @@
-local bert_model = "bert-base-uncased";
+local debug = true;
+
+local bert_model = "roberta-base";
 local max_length = 128;
 local max_span_width = 10;
 local bert_dim = 768;
 local lstm_dim = 200;
 local batch_size = 1;
 local epochs = 5;
+
+local train_data_path = if debug then "data/debug-train-si" else "data/train-si";
+local validation_data_path = if debug then "data/debug-dev-si" else "data/dev-si";
+
 
 {
     "dataset_reader" : {
@@ -18,8 +24,8 @@ local epochs = 5;
         },
         "max_span_width": max_span_width
     },
-    "train_data_path": "data/train-si",
-    "validation_data_path": "data/dev-si",
+    "train_data_path": train_data_path,
+    "validation_data_path": validation_data_path,
     "model": {
         "type": "span-identifier",
         "text_field_embedder": {
