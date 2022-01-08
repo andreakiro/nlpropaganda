@@ -33,8 +33,8 @@ def main(args):
         # Last article
         merged_spans = _merge_spans(cur_spans)
         with open(spans_file[:-4] + "_merged.txt", 'a') as file:
-                    for merged_start, merged_end in merged_spans:
-                        file.write(f"{cur_art_id}\t{merged_start}\t{merged_end}\n")
+            for merged_start, merged_end in merged_spans:
+                file.write(f"{cur_art_id}\t{merged_start}\t{merged_end}\n")
 
 def _merge_spans(spans):
     """
