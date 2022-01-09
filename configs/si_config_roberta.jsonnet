@@ -1,4 +1,4 @@
-local debug = true;
+local debug = false;
 
 local bert_model = "roberta-base";
 local max_length = 128;
@@ -6,7 +6,7 @@ local max_span_width = 10;
 local bert_dim = 768;
 local lstm_dim = 200;
 local batch_size = 1;
-local epochs = 5;
+local epochs = 10;
 
 local train_data_path = if debug then "data/debug-train-si" else "data/train-si";
 local validation_data_path = if debug then "data/debug-dev-si" else "data/dev-si";
