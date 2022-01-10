@@ -1,5 +1,5 @@
 import logging
-from typing import Dict
+from typing import Dict, List
 from allennlp.data.vocabulary import Vocabulary
 from allennlp.modules.seq2seq_encoders.seq2seq_encoder import Seq2SeqEncoder
 from allennlp.modules.span_extractors.endpoint_span_extractor import EndpointSpanExtractor
@@ -79,9 +79,10 @@ class TechniqueClassifier(Model):
         content: TextFieldTensors,
         si_spans: torch.IntTensor,
         gold_labels: torch.IntTensor = None,
+        metadata: List[Dict[str, int]] = None,
     ) -> Dict[str, torch.Tensor]:
         """
-        # Parameters
+        # Parameters
         si_spans: `torch.IntTensor` required.
             Batch of spans on which to perform training or prediction.
         gold_spans: `torch.IntTensor` optional.
@@ -117,18 +118,15 @@ class TechniqueClassifier(Model):
         technique_probs = F.softmax(logits, dim=2)
 
         output_dict = {
-            # "technique_preds": technique_preds,
             "technique_probs": technique_probs,
+            "metadata": metadata
         }
 
         if gold_labels is not None:
-            gold_labels = gold_labels.cuda()
-
             self._metrics(logits, gold_labels)
-
-            gold_labels = torch.flatten(gold_labels)
-            weight = (torch.sum(gold_labels) - torch.bincount(gold_labels, minlength=15)).cuda()
-            output_dict["loss"] = F.cross_entropy(torch.flatten(logits, end_dim=1), gold_labels, weight=weight)
+            weight = torch.sum(torch.flatten(gold_labels)) - torch.bincount(torch.flatten(gold_labels), minlength=15)
+            # weight = 1 - (torch.bincount(torch.flatten(gold_labels), minlength=15) / torch.sum(torch.flatten(gold_labels)))
+            output_dict["loss"] = F.cross_entropy(logits[0].float(), gold_labels[0].long(), weight=weight.float())
 
         return output_dict
 
