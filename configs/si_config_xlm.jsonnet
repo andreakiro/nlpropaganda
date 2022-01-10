@@ -1,6 +1,6 @@
 local debug = false;
 
-local bert_model = "t5-base";
+local bert_model = "xlm-roberta-base";
 local max_length = 128;
 local max_span_width = 10;
 local bert_dim = 768;
