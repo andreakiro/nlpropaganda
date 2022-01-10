@@ -9,12 +9,15 @@ from allennlp.training.metrics.fbeta_multi_label_measure import FBetaMeasure
 
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 from sklearn.metrics import f1_score
 
 from allennlp.nn import util
 from allennlp.data import TextFieldTensors
 from allennlp.models.model import Model
+
+from src.utils import int_to_label
 from torch.overrides import get_overridable_functions
 
 logger = logging.getLogger(__name__)
@@ -124,10 +127,11 @@ class TechniqueClassifier(Model):
 
         if gold_labels is not None:
             self._metrics(logits, gold_labels)
-            weight = torch.sum(torch.flatten(gold_labels)) - torch.bincount(torch.flatten(gold_labels), minlength=15)
-            # weight = 1 - (torch.bincount(torch.flatten(gold_labels), minlength=15) / torch.sum(torch.flatten(gold_labels)))
-            output_dict["loss"] = F.cross_entropy(logits[0].float(), gold_labels[0].long(), weight=weight.float())
+            w = np.array([3,1,1,1,1,1,1,1,1,1,1,1,1,1,1])/17
+            weights = torch.as_tensor(w, dtype=float)
+            output_dict["loss"] = F.cross_entropy(logits[0].float(), gold_labels[0].long(), weight=weights.float())
 
+        logger.info(f"PREDS {torch.argmax(technique_probs, dim=2)}")
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
