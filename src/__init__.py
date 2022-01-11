@@ -8,3 +8,4 @@ from src.si.si_predictor import SpanIdentificationPredictor
 
 from src.tc.tc_reader import TechniqueClassificationReader
 from src.tc.tc_model import TechniqueClassifier
+from src.tc.tc_predictor import TechniqueClassificationPredictor

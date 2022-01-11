@@ -18,6 +18,7 @@ from allennlp.data.token_indexers import TokenIndexer, SingleIdTokenIndexer
 from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer
 from allennlp.models.archival import Archive
 from allennlp.data.fields.label_field import LabelField
+from allennlp.data.fields.metadata_field import MetadataField
 
 from src.si.si_model import SpanIdentifier
 
@@ -91,13 +92,14 @@ class TechniqueClassificationReader(DatasetReader):
                             gold_label_spans.append((label, int(span_start), int(span_end)))
                 
                 # add assertions
-                yield self.text_to_instance(content, gold_label_spans)
+                yield self.text_to_instance(content, article.name[7:-4], gold_label_spans)
         
         # logger.info(f'Finished reading {articles_dir}')
     
     @overrides
     def text_to_instance(
         self, content: str, 
+        article_id: int,
         gold_label_spans: List[Tuple[str, int, int]] = None
     ) -> Instance:
         fields: Dict[str, Field] = {}
@@ -112,12 +114,12 @@ class TechniqueClassificationReader(DatasetReader):
         spans_field = ListField([SpanField(start, end, article_field) for start, end in all_spans])
 
         # Call SI model to get si-spans
-        inst = Instance({'content': article_field, 'all_spans': spans_field})
+        inst = Instance({'batch_content': article_field, 'batch_all_spans': spans_field, 'metadata': MetadataField(None)})
         si_output = self._si_model.forward_on_instance(inst)
         si_spans = torch.as_tensor(si_output["all-spans"])
-        si_probs = torch.as_tensor(si_output["probs-spans"])
+        si_probs = torch.as_tensor(si_output["probs"])
 
-        mask = si_probs >= 0.9
+        mask = si_probs >= 0.75
         mask = torch.stack((mask, mask), dim=1).reshape(mask.shape[0], 2)
         filtered_spans = torch.masked_select(si_spans, mask).reshape(-1, 2)
 
@@ -129,6 +131,7 @@ class TechniqueClassificationReader(DatasetReader):
 
         # Add si-spans to our field dict
         fields["si_spans"] = ListField([SpanField(start.item(), end.item(), article_field) for start, end in filtered_spans])
+        fields["metadata"] = MetadataField(metadata={"article_id": article_id})
 
         if gold_label_spans is not None:
             # Add gold-spans to our field dict

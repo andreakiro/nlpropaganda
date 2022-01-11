@@ -25,9 +25,9 @@ def label_to_int(label):
 
 def int_to_label(i):
     for key, value in labels.items():
-         if value == i:
-             return key
-    raise ValueError(f'Key for value {value} doesnt exist.')
+        if value == i:
+            return key
+    raise ValueError(f'Key for value {i} doesnt exist.')
 
 def get_not_propaganda():
     return labels['Not_Propaganda']

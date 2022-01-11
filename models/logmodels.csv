@@ -5,3 +5,4 @@ TC, model999, First entire run, 0.021, 0.001, 0.998, 1.000, 1, 0:25:34
 SI, model457, + 8 epochs training, 0.038, 3.284, 0.717, 0.572, 8, 8:57:52
 SI, model2005, metric class updated, 0.031, 1.362, 0.380, 0.334, 8, 8:49:25
 SI, model666, RoBERTa embeddings, 0.0076, 0.380, 0.608, 0.380, 10, 6:08:27
+SI, si_bert99, BERT embeddings, 0.0043, 0.1852, 0.681, 0.389, 10, 5:19:12

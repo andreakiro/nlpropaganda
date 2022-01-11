@@ -4,7 +4,7 @@ local max_span_width = 10;
 local bert_dim = 768;
 local lstm_dim = 200;
 local batch_size = 1;
-local epochs = 5;
+local epochs = 10;
 
 {
     "dataset_reader" : {
