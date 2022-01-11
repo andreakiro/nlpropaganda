@@ -13,4 +13,6 @@ __pycache__/
 
 # WIP Serialized models
 models/model*/
-submissions/*.txt
+subs/*.txt
+submissions/*
+subs*
