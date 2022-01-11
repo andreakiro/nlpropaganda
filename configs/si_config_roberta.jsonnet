@@ -11,7 +11,6 @@ local epochs = 10;
 local train_data_path = if debug then "data/debug-train-si" else "data/train-si";
 local validation_data_path = if debug then "data/debug-dev-si" else "data/dev-si";
 
-
 {
     "dataset_reader" : {
         "type": "si-reader",

@@ -23,8 +23,8 @@ local epochs = 10;
             "archive_file": si_model
         },
     },
-    "train_data_path": "data/debug-tc",
-    "validation_data_path": "data/debug-tc",
+    "train_data_path": "data/train-tc",
+    "validation_data_path": "data/dev-tc",
     "model": {
         "type": "technique-classifier",
         "text_field_embedder": {
