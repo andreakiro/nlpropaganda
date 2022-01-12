@@ -127,11 +127,10 @@ class TechniqueClassifier(Model):
 
         if gold_labels is not None:
             self._metrics(logits, gold_labels)
-            w = np.array([3,1,1,1,1,1,1,1,1,1,1,1,1,1,1])/17
+            w = np.array([24512, 2123, 1058, 621, 493, 466, 294, 229, 209, 144, 129, 107, 107, 76, 72])/30640
             weights = torch.as_tensor(w, dtype=float)
             output_dict["loss"] = F.cross_entropy(logits[0].float(), gold_labels[0].long(), weight=weights.float())
 
-        logger.info(f"PREDS {torch.argmax(technique_probs, dim=2)}")
         return output_dict
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

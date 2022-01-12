@@ -1,13 +1,8 @@
 local bert_model = "bert-base-uncased";
-local si_model = "models/models_si/si_roberta/model.tar.gz";
-
-local epochs = 20;
-local max_span_width = 10;
-
 local max_length = 128;
+local max_span_width = 20;
 local bert_dim = 768;
-local lstm_dim = 200;
-local batch_size = 1;
+local lstm_dim = 200; 
 
 {
     "dataset_reader" : {
@@ -22,7 +17,7 @@ local batch_size = 1;
         "max_span_width": max_span_width,
         "si_model": {
             "type": "from_archive",
-            "archive_file": si_model
+            "archive_file": "models/models_si/model2001/model.tar.gz"
         },
     },
     "train_data_path": "data/train-tc",
@@ -51,13 +46,12 @@ local batch_size = 1;
     "data_loader": {
         "batch_sampler": {
             "type": "bucket",
-            "sorting_keys": ["content"],
-            "padding_noise": 0.0,
-            "batch_size": batch_size
+            "sorting_keys": ["si_spans"],
+            "batch_size": 1
         }
     },
     "trainer": {
-        "num_epochs": epochs,
+        "num_epochs": 1,
         "grad_norm": 5.0,
         "patience" : 10,
         "learning_rate_scheduler": {
@@ -73,6 +67,7 @@ local batch_size = 1;
             "parameter_groups": [
                 [[".*transformer.*"], {"lr": 1e-5}]
             ]
-        }
+        },
+        "cuda_device" : 0
     }
 }
