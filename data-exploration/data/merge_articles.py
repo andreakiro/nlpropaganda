@@ -61,15 +61,15 @@ def merge_spans(spans):
 
 def resave_pred():
     labels = {}
-    with open("output1_merged.txt", 'r') as lines:
+    with open("output1.txt", 'r') as lines:
         for line in lines:
             article_id, span_start, span_end = line.strip().split()
             if article_id not in labels:
                 labels[article_id] = [[int(span_start), int(span_end)]]
             else:
                 labels[article_id].append([int(span_start), int(span_end)])
-    a_file = open("pred.pkl", "wb")
+    a_file = open("pred_original.pkl", "wb")
     pickle.dump(labels, a_file)
     a_file.close()
 
-main()
+resave_pred()
