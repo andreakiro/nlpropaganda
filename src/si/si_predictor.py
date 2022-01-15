@@ -26,7 +26,7 @@ class SpanIdentificationPredictor(Predictor):
 
         si_spans = si_spans[mask, :]
 
-        with open('submissions/output' + str(1) + ".txt", 'a') as file:
+        with open('subs/output_bert0' + str(123) + ".txt", 'a') as file:
             for start, end in si_spans:
                 file.write(f"{article_id}\t{article_tokens[start].idx}\t{article_tokens[end].idx_end}\n")
 

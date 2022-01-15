@@ -46,9 +46,6 @@ class TechniqueClassificationReaderAlt(DatasetReader):
                 with open(article, 'r') as file:
                     content = file.read()
 
-                if "test" in articles_dir:
-                    raise Exception('Undefined', 'We dont have the data!')
-
                 if "test" not in articles_dir:
                     labels = []
                     with open(os.path.join(articles_dir, 'labels', article.name[:-3] + 'task-flc-tc.labels'), 'r') as lines:
@@ -56,8 +53,13 @@ class TechniqueClassificationReaderAlt(DatasetReader):
                             _, label, span_start, span_end = line.strip().split("\t")
                             spans.append((int(span_start), int(span_end)))
                             labels.append(label_to_int_alt(label))
-                    if "dev" in articles_dir:
-                        labels = None
+                    if len(labels) == 0:
+                        continue
+                else:
+                    with open(os.path.join(articles_dir, 'labels', article.name[:-3] + 'task-flc-tc.labels'), 'r') as lines:
+                        for line in lines:
+                            _, span_start, span_end = line.strip().split("\t")
+                            spans.append((int(span_start), int(span_end)))
                 
                 yield self.text_to_instance(content, article.name[7:-4], spans, labels)
     
@@ -79,14 +81,12 @@ class TechniqueClassificationReaderAlt(DatasetReader):
         # Add gold labels to instance
         if labels is not None:
             labs: List[LabelField] = [LabelField(x, skip_indexing=True) for x in labels]
-            dummy: LabelField = LabelField(0, skip_indexing=True)
-            fields["gold_labels"] = ListField(labs) if len(labs) > 0 else ListField([dummy])
+            fields["gold_labels"] = ListField(labs)
         
         # Add spans to instance
         spans_token_space = self._map_to_token_space(content, spans, tokens)
         span_field: List[SpanField] = [SpanField(start, end, article_field) for start, end in spans_token_space]
-        dummy: SpanField = SpanField(-1, -1, article_field).empty_field()
-        fields["spans"] = ListField(span_field) if len(span_field) > 0 else ListField([dummy]).empty_field()
+        fields["spans"] = ListField(span_field)
 
         metadata["article_id"] = article_id
         fields["metadata"] = MetadataField(metadata)

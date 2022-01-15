@@ -78,23 +78,23 @@ class TechniqueClassifierAlt(Model):
         # Shape: (batch_size, article_length, encoding_dim)
         contextualized_embeddings = self._context_layer(text_embeddings, text_mask)
 
-        try:
-            # Shape: (batch_size, num_spans, 2 * encoding_dim + feature_size)
-            endpoint_span_embeddings = self._endpoint_span_extractor(contextualized_embeddings, spans)
-            # Shape: (batch_size, num_spans, embedding_size)
-            attended_span_embeddings = self._attentive_span_extractor(text_embeddings, spans)
+        # try:
+        # Shape: (batch_size, num_spans, 2 * encoding_dim + feature_size)
+        endpoint_span_embeddings = self._endpoint_span_extractor(contextualized_embeddings, spans)
+        # Shape: (batch_size, num_spans, embedding_size)
+        attended_span_embeddings = self._attentive_span_extractor(text_embeddings, spans)
 
-            # Shape: (batch_size, num_spans, embedding_size + 2 * encoding_dim + feature_size)
-            span_embeddings = torch.cat([endpoint_span_embeddings, attended_span_embeddings], -1)
+        # Shape: (batch_size, num_spans, embedding_size + 2 * encoding_dim + feature_size)
+        span_embeddings = torch.cat([endpoint_span_embeddings, attended_span_embeddings], -1)
 
-            # Shape: (batch_size, num_spans, num_classes)
-            logits = self._classifier(span_embeddings)
+        # Shape: (batch_size, num_spans, num_classes)
+        logits = self._classifier(span_embeddings)
         
-        except ConfigurationError:
-            logger.info("Hey buddy!")
-            logits = torch.randn(spans.size()[0], spans.size()[1], 14, requires_grad=True)
-            logger.info(logits)
-            logger.info(gold_labels)
+        # except ConfigurationError:
+            # logger.info("Hey buddy!")
+        # logits = torch.randn(spans.size()[0], spans.size()[1], 14, requires_grad=True)
+            # logger.info(logits)
+            # logger.info(gold_labels)
         
         technique_probs = F.softmax(logits, dim=2)
 
