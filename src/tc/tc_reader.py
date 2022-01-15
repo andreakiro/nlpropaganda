@@ -1,10 +1,10 @@
+from operator import truediv
 from typing import Dict, Iterable, List, Tuple
 import logging
 import os
 from allennlp.models.model import Model
 
 from overrides import overrides
-
 from src.utils import filter_function, label_to_int, get_not_propaganda
 
 import torch
@@ -119,7 +119,7 @@ class TechniqueClassificationReader(DatasetReader):
         si_spans = torch.as_tensor(si_output["all-spans"])
         si_probs = torch.as_tensor(si_output["probs"])
 
-        mask = si_probs >= 0.75
+        mask = si_probs >= 0.5
         mask = torch.stack((mask, mask), dim=1).reshape(mask.shape[0], 2)
         filtered_spans = torch.masked_select(si_spans, mask).reshape(-1, 2)
 
@@ -162,10 +162,28 @@ class TechniqueClassificationReader(DatasetReader):
         for span in si_spans:
             labelled = False
             for tup in gold_label_spans:
-                if span[0] == tup[1] and span[1] == tup[2]: # smarter ? achtung mapping int->str
+                # case ([])
+                if span[0] <= tup[1] and tup[2] <= span[1]:
                     labels.append(label_to_int(tup[0]))
                     labelled = True
                     break
+
+                # case ([)]
+                if span[0] <= tup[1] and span[1] < tup[2] and (span[1] - tup[1] + 1) / (span[1] - span[0] + 1) >= 0.5:
+                    labels.append(label_to_int(tup[0]))
+                    labelled = True
+                    break
+                
+                # case [(])
+                if tup[1] < span[0] and span[0] <= tup[2] and (span[0] - tup[2] + 1) / (span[1] - span[0] + 1) >= 0.5:
+                    labels.append(label_to_int(tup[0]))
+                    labelled = True
+                    break
+                    
+                # if span[0] == tup[1] and span[1] == tup[2]:
+                #     labels.append(label_to_int(tup[0]))
+                #     labelled = True
+                #     break
             if not labelled:
                 labels.append(get_not_propaganda())
         
