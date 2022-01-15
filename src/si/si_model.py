@@ -13,6 +13,8 @@ from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
 from allennlp.modules.span_extractors import SelfAttentiveSpanExtractor, EndpointSpanExtractor
 
+from transformers import T5Tokenizer, T5ForConditionalGeneration 
+
 from src.si.si_metric import SpanIdenficationMetric
 
 logger = logging.getLogger(__name__)
@@ -116,6 +118,7 @@ class SpanIdentifier(Model):
         loss: `torch.FloatTensor` optional.
             A scalar loss to be optimised when training.
         """
+
         # Shape: (batch_size, article_length, embedding_size)
         text_embeddings = self._text_field_embedder(batch_content)
 
@@ -146,7 +149,7 @@ class SpanIdentifier(Model):
 
         if batch_gold_spans is not None:
             # Create mask to filter spans
-            mask = probs >= 0.5
+            mask = probs >= 0.75
             mask = torch.stack((mask, mask), dim=2)
             # Shape: (batch_size, num_spans_propaganda, 2)
             mask = mask.reshape(mask.shape[0], mask.shape[1], 2)

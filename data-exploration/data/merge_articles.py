@@ -61,7 +61,7 @@ def merge_spans(spans):
 
 def resave_pred():
     labels = {}
-    with open("output1.txt", 'r') as lines:
+    with open("output1_merged.txt", 'r') as lines:
         for line in lines:
             article_id, span_start, span_end = line.strip().split()
             if article_id not in labels:

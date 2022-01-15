@@ -6,3 +6,4 @@ SI, model457, + 8 epochs training, 0.038, 3.284, 0.717, 0.572, 8, 8:57:52
 SI, model2005, metric class updated, 0.031, 1.362, 0.380, 0.334, 8, 8:49:25
 SI, model666, RoBERTa embeddings, 0.0076, 0.380, 0.608, 0.380, 10, 6:08:27
 SI, si_bert99, BERT embeddings, 0.0043, 0.1852, 0.681, 0.389, 10, 5:19:12
+SI, si-roberta-75, Higher training threshold, 0.007646374094338661, 0.6413991378723827, 0.4264906299452607, 6:01:54.550374

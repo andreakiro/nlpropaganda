@@ -1,17 +1,20 @@
-local bert_model = "bert-base-uncased";
-local si_model = "models/models_si/si_roberta/model.tar.gz";
+local debug = false;
 
-local epochs = 1;
-local max_span_width = 10;
-
+local bert_model = "xlm-roberta-base";
 local max_length = 128;
+local max_span_width = 10;
 local bert_dim = 768;
 local lstm_dim = 200;
 local batch_size = 1;
+local epochs = 10;
+
+local train_data_path = if debug then "data/debug-train-si" else "data/train-si";
+local validation_data_path = if debug then "data/debug-dev-si" else "data/dev-si";
+
 
 {
     "dataset_reader" : {
-        "type": "tc-reader",
+        "type": "si-reader",
         "token_indexers": {
             "tokens": {
                 "type": "pretrained_transformer_mismatched",
@@ -19,16 +22,12 @@ local batch_size = 1;
                 "max_length": max_length
             }
         },
-        "max_span_width": max_span_width,
-        "si_model": {
-            "type": "from_archive",
-            "archive_file": si_model
-        },
+        "max_span_width": max_span_width
     },
-    "train_data_path": "data/train-tc",
-    "validation_data_path": "data/dev-tc",
+    "train_data_path": train_data_path,
+    "validation_data_path": validation_data_path,
     "model": {
-        "type": "technique-classifier",
+        "type": "span-identifier",
         "text_field_embedder": {
             "token_embedders": {
                 "tokens": {
@@ -49,11 +48,11 @@ local batch_size = 1;
         "max_span_width": max_span_width,
     },
     "data_loader": {
+        // "max_instances_in_memory": batch_size * 4,
         "batch_sampler": {
             "type": "bucket",
-            "sorting_keys": ["content"],
-            "padding_noise": 0.0,
-            "batch_size": batch_size
+            "sorting_keys": ["batch_all_spans"],
+            "batch_size": batch_size,
         }
     },
     "trainer": {
@@ -73,6 +72,6 @@ local batch_size = 1;
             "parameter_groups": [
                 [[".*transformer.*"], {"lr": 1e-5}]
             ]
-        }
+        },
     }
 }

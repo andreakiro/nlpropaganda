@@ -23,7 +23,7 @@ class SpanIdentificationReader(DatasetReader):
         self,
         max_span_width: int,
         tokenizer: Tokenizer = SpacyTokenizer(),
-        token_indexers: Dict[str, TokenIndexer] = {"tokens": SingleIdTokenIndexer()},
+        token_indexers: Dict[str, TokenIndexer] = {"singleid": SingleIdTokenIndexer()},
         **kwargs
     ):
         super().__init__(**kwargs)
