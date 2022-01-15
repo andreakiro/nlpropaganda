@@ -79,8 +79,8 @@ class TechniqueClassificationReaderAlt(DatasetReader):
         # Add gold labels to instance
         if labels is not None:
             labs: List[LabelField] = [LabelField(x, skip_indexing=True) for x in labels]
-            dummy: LabelField = LabelField(-1, skip_indexing=True).empty_field()
-            fields["gold_labels"] = ListField(labs) if len(labs) > 0 else ListField([dummy]).empty_field()
+            dummy: LabelField = LabelField(0, skip_indexing=True)
+            fields["gold_labels"] = ListField(labs) if len(labs) > 0 else ListField([dummy])
         
         # Add spans to instance
         spans_token_space = self._map_to_token_space(content, spans, tokens)
