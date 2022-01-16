@@ -1,0 +1,45 @@
+\begin{strip}
+    \centering
+    \textbf{\Large BERT, RoBERTa and T5 transformers implementations \\ 
+    for Detection of Propaganda Techniques in News Articles.}\\
+    \vspace{0.2cm}
+    \textbf{\large Intermediary Paper Report} \normalsize
+    \vspace{4mm}
+\end{strip}
+
+\section*{Progress report notes}
+Since the project proposal was submitted on November 1st, our team focused on designing an architecture that could handle \pol{RoBERTa} and \pol{T5} technologies for propaganda detection. We propose below a novel approach to solve both the span identification (\pol{SI}) and the technique classification (\pol{TC}) sub-tasks.
+
+Although the result section is still mostly empty in this paper, we already have functional running models for both \pol{SI} and \pol{TC} tasks.
+Our entire code work is visible on our public GitHub repository\footnote{ \url{https://github.com/andreakiro/nlpropaganda}}.
+
+\subsection*{Reshaping the scope of the project}
+Recall now that the objective we defined in our project proposal was two-fold:
+\begin{enumerate}
+    \item To implement different models able to automatically detect the use of propaganda techniques in text snippets, accomplishing both the \pol{SI} and \pol{TC} sub-tasks of the shared task.
+    \item To compare the implemented models and draw conclusions on their performance through an error analysis for each of them.
+\end{enumerate}
+We proposed to fulfill Goal (1) with the following:
+\begin{enumerate}[(a)]
+    \item A small self-trained language model to provide a baseline performance we can compare other models to.
+    \item \pol{RoBERTa} \cite{roberta}, a state-of-the-art pre-trained model based on the Transformer architecture.
+    \item \pol{T5} \cite{2020t5}, another state-of-the-art Transformer based architecture that uses a text-to-text approach.
+\end{enumerate}
+So far, we have spent our time designing and implementing a modular architecture, which would allow us to smoothly integrate different models.
+Because we are confident in our ability to further enhance our architecture, we have decided to focus on pre-trained language models (PLMs), and not to develop our own self-trained language model from scratch (as said in (a)). Therefore, we will use \pol{BERT} as our new baseline model, to compare the effects of different \pol{PLM}s.
+
+\subsection*{Remaining objectives}
+To conclude the project, we would like to:
+\begin{enumerate}
+    \item Solve the problems we're currently facing with our architecture. 
+    \begin{enumerate}
+        \item Fine tuning the weights for the \pol{SI} model, introduced to combat class imbalance, our model now predicts too many spans as being propaganda (this behaviour can be observed interpreting the results in Table \ref{table:si-results}).
+        \item Memory management problems in PyTorch, that prevent us from successfully training our model using GPUs.
+        \item Find correct weights for our \pol{TC} model to combat class imbalance.
+    \end{enumerate}
+    \item Fine-tune our architecture using different state-of-the-art \pol{PLM}s, changing hyperparameters and adding regularization methods.
+    \item Train multiple epochs of our models on the Euler ETH cluster GPUs to better fit them.
+    \item Implement a final predictions writer to create human readable output, allowing us to feed our model any kind of text to retrieve the fragments classified as propaganda from it, and the technique associated with each of them.
+    \item Possibly exploring the implementation of add-on features to our architecture such as conditional random field (\pol{CRF}) or data augmentation techniques such as \textit{back translation}, \textit{random replacement} and \textit{random insertion} in order to further enhance the results.
+    \item Compare the implemented final models and draw conclusions on their performance through a complete error analysis.
+\end{enumerate}
