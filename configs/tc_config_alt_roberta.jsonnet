@@ -1,20 +1,16 @@
-local debug = false;
+local model = "roberta-base";
 
-local model = "bert-base-uncased";
+local epochs = 10;
+local max_span_width = 180;
 
 local max_length = 128;
-local max_span_width = 10;
 local bert_dim = 768;
 local lstm_dim = 200;
 local batch_size = 1;
-local epochs = 10;
-
-local train_data_path = if debug then "data/debug-train-si" else "data/train-si";
-local validation_data_path = if debug then "data/debug-dev-si" else "data/dev-si";
 
 {
     "dataset_reader" : {
-        "type": "si-reader",
+        "type": "tc-reader-alt",
         "token_indexers": {
             "tokens": {
                 "type": "pretrained_transformer_mismatched",
@@ -22,12 +18,11 @@ local validation_data_path = if debug then "data/debug-dev-si" else "data/dev-si
                 "max_length": max_length
             }
         },
-        "max_span_width": max_span_width
     },
-    "train_data_path": "data/train-si",
-    "validation_data_path": "data/dev-si",
+    "train_data_path": "data/train-tc",
+    "validation_data_path": "data/dev-tc",
     "model": {
-        "type": "span-identifier",
+        "type": "technique-classifier-alt",
         "text_field_embedder": {
             "token_embedders": {
                 "tokens": {
@@ -48,11 +43,11 @@ local validation_data_path = if debug then "data/debug-dev-si" else "data/dev-si
         "max_span_width": max_span_width,
     },
     "data_loader": {
-        // "max_instances_in_memory": batch_size * 4,
         "batch_sampler": {
             "type": "bucket",
-            "sorting_keys": ["batch_all_spans"],
-            "batch_size": batch_size,
+            "sorting_keys": ["content"],
+            "padding_noise": 0.0,
+            "batch_size": batch_size
         }
     },
     "trainer": {
@@ -72,6 +67,6 @@ local validation_data_path = if debug then "data/debug-dev-si" else "data/dev-si
             "parameter_groups": [
                 [[".*transformer.*"], {"lr": 1e-5}]
             ]
-        },
+        }
     }
 }
