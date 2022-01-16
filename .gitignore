@@ -16,3 +16,7 @@ models/model*/
 subs/*.txt
 submissions/*
 subs*
+
+# Data
+data/
+shared-task/
