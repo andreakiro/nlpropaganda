@@ -3,17 +3,38 @@ Main repo for ETHZ Natural Language Processing course project.
 
 ## Project papers
 - [Project proposal](papers/proposal/nlpropaganda-proposal.pdf)
-- [Project progress report](papers/progress/nlpropaganda-progress.pdf)
+- [Project paper](papers/paper/nlpropaganda-paper.pdf)
 
 ## Logs models results
 - [Logs models results](models/logmodels.csv)
 
+## Serialized models
+Find serialized best performing models on Google Drive:
+- For the `si-subtask` : [`si-roberta`](https://drive.google.com/drive/folders/1c5hERcY6hQM5J2veKKDI8kRhVZtlJXg4?usp=sharing)
+- For the `tc-subtask` : [`tc-alt-roberta`](https://drive.google.com/drive/folders/1qT7DgwGsPKTwnmol6vOUBNV122m6BiFY?usp=sharing)
+
 ## Running the models
 ```
 allennlp train configs/abcd.jsonnet --include-package src --serialization-dir models/models_{[si, tc]}/model{x}
+```
+```
 allennlp evaluate {model_serialized_dir} {dataset_dir} --include-package src
+```
+```
 allennlp predict {model_serialized_dir} {dataset_dir} --include-package src --predictor {predictor_name}
 ```
+
+## Detect your own propaganda
+1. Find a raw text file `.txt`
+2. Name it `article[x].txt` e.g. `article000.txt`
+3. Place it in a folder containing the word `test` e.g. `data-test/`
+4. Run the `si-model` predictor using the above allennlp instruction
+5. Rename the `si`-output prediction as `article000.task-flc-tc.labels`
+6. Place this file in a new folder name `labels` in your dataset folder
+7. Run the `tc-model` predictor using the above allennlp instruction
+
+---
+# Further instructions
 
 ## `allennlp` installation on M1
 ```
