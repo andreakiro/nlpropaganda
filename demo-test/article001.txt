@@ -1,0 +1,1074 @@
+SemEval-2020 Task 11: Experiments on a Novel Approach
+for the Detection of Propaganda Techniques in News Articles.
+Natural Language Processing Project Paper, Fall 2021
+
+Antoine Basseto, Giacomo Camposampiero and Andrea Pinto
+ETH Zurich - Swiss Federal Institute of Technology
+{abasseto, gcamposampie, pintoa}@ethz.ch
+
+Abstract
+This paper describes the design of our system
+contributing to the Task 11 of SemEval-2020
+(Martino et al., 2020a) aiming to detect propaganda techniques in news articles. We investigate a novel approach allowing the technique
+classification task (TC) to work under relaxed
+assumptions and be more easily applicable to
+real-world scenarios, leading to changes in the
+span identification task (SI) as well. Both
+models are built on top of heterogeneous pretrained language models (PLMs) such as BERT,
+RoBERTa and XLNet. The described architecture achieved an F1 -score of 0.46072 on the
+SI task (ranking 8/45) and proved flawed for
+the TC task, with important adjustments having to be made before being able to achieve an
+F1 -score of X.
+
+which enables the participant to develop detection
+models that automatically spot a defined range of
+14 propaganda techniques in written texts.
+The focus of the task is broken down into two
+well-defined sub-tasks, namely (1) Span identification (SI) to detect the text fragments representative of a propaganda technique in the news articles
+and (2) Technique classification (TC) to detect the
+propaganda technique used in a given text span.
+Our entire project is publicly available on our
+GitHub repository2 . You can also see the results
+provided by our architecture on the leaderboard
+of the SemEval-2020 shared task, our team name
+being nlpboomers.
+
+2
+2.1
+
+1
+
+Introduction
+
+Related Work
+Literature review
+
+The proliferation of online misinformation has led
+to a significant amount of research into the automatic detection of fake news (Shu et al., 2017).
+However, most of the efforts have been concentrated on whole-document classification (Rashkin
+et al., 2017) or analysis of the general patterns of
+online propaganda (Garimella et al., 2018; Chatfield et al., 2015), while little has been done so
+far in terms of fine-grained text analysis. This approach could complement existing techniques and
+allow the user to extract more informed and nuanced judgment on the piece being read. Moreover,
+it could also inform journalists on the pitfalls they
+might be falling into when writing articles.
+In this context, Task 11 of SemEval-20201 (Martino et al., 2020a) aims to bridge this gap, facilitating the development of models capable of spotting
+text fragments where a defined set of propaganda
+techniques are being used. This shared task provides a well-annotated dataset of 536 news articles,
+
+Literature regarding fine-grained propaganda detection and analysis has known a significant development only in the last few years, mostly thanks to
+the different shared tasks that covered this particular topic (Da San Martino et al., 2019a; Martino
+et al., 2020b).
+One of the first contributions can be traced
+back to (Da San Martino et al., 2019b), which
+proposed a BERT-based model to detect propaganda spans and to classify their techniques. In
+the NLP4IF-2019 shared task, the participants used
+pre-trained language models (PLMs), LSTMs and
+ensembles to tackle the problem of fine-grained
+propaganda classification (Yoosuf and Yang, 2019;
+Vlad et al., 2019; Tayyar Madabushi et al., 2019).
+Also in SemEval-2020 most of the winning teams
+solutions relied on Transformers and ensembles
+(Chernyavskiy et al., 2020; Morio et al., 2020; Dimov et al., 2020; Jurkiewicz et al., 2020).
+Our work is especially related to the cited studies of winning teams of the SemEval-2020 shared-
+
+1
+The official task webpage: https://propaganda.
+qcri.org/semeval2020-task11/
+
+2
+https://github.com/andreakiro/
+nlpropaganda
+
+task. We decided to use the same PLMs as the other
+teams, with the addition of XLNet. However, we
+differ by tackling the TC sub-task in a way none of
+the previous teams had explored, leading to other
+subtleties in the SI sub-task as well.
+2.2
+
+Pre-Trained Language Models (PLMs)
+
+In this study, three different types of Transformerbased PLMs (Vaswani et al., 2017) were used to
+tackle the tasks. Note that during training, we also
+update the weight parameters of the pre-trained
+models in order to fine-tune them.
+BERT (Devlin et al., 2019) is the epoch-making
+Transformer-based masked language model. In our
+work, the BERTBASE model was employed.
+RoBERTa (Liu et al., 2019) is a fine-tuned BERTbased model where the authors investigated hyperparameters and training data size. RoBERTa has
+achieved state-of-the-art results. In our work, the
+RoBERTaBASE model was employed.
+XLNet (Yang et al., 2020) is a state-of-the-art
+extended Transformer using an autoregressive
+method to learn bidirectional contexts by maximizing the expected likelihood over all permutations
+of the input sequence factorization order. In our
+work, the XLNetLARGE model was employed.
+2.3
+
+Dataset
+
+3.1
+
+Data description
+
+The dataset used for the task, PTC-SemEval20 corpus (Martino et al., 2020a), consists of a sample
+of news articles collected from mid-2017 to early
+2019. The articles were retrieved from 13 propaganda and 36 non-propaganda news outlets, as
+labeled by Media Bias/Fact Check3 , and manually annotated by the organizers. The exact procedure of text labeling is discussed in depth in both
+(Da San Martino et al., 2019b) and (Martino et al.,
+2020a).
+3
+
+3.2
+
+Data exploration
+
+Some statistics about the corpus (e.g. the number
+of instances and the average length in terms of tokens/characters for each propaganda technique, the
+average length of articles and others) were already
+given by the organizers as part of the shared task
+description paper (Martino et al., 2020a).
+One such piece of information provided by the
+organizers is the distribution of the different propaganda techniques in the datasets. Those results can
+be seen in Figure 1, as reported in (Martino et al.,
+2020a).
+
+Technology stack
+
+We opted to implement our architecture in
+AllenNLP (Gardner et al., 2017), a recent NLP
+research library developed by the Allen Institute
+for Artificial Intelligence. The framework is built
+on top of PyTorch (Paszke et al., 2019) and SpaCy
+(Honnibal and Montani, 2017), and was explicitly
+designed for developing state-of-the-art deep learning models on a wide variety of NLP tasks.
+
+3
+
+The training and validation part of the corpus
+are the same as those presented in (Da San Martino
+et al., 2019b). The test part of the corpus consists of
+90 additional news article in respect to the original
+evaluation articles, retrieved and annotated using
+the same procedure as the original. In total, the
+collection consists of 536 news articles containing
+8,981 propaganda spans, that belong to one of the
+fourteen possible techniques.
+
+https://mediabiasfactcheck.com
+
+Figure 1: Number of instances for each technique.
+
+In addition to this data, a more fine-grained exploration of the training corpus was performed as
+one of the first steps in tackling the task. The main
+reasons for this additional exploration were:
+• To extract meaningful insights that could be
+used to infer robust and effective heuristics
+for span pruning in SI preprocessing, as discussed in Section 4.1.1.
+• To justify some of our model architecture
+choices, especially for the SI model and its
+specificities we discuss in Section 4.1.
+Some of the results of this analysis have been
+reported in Figures 2 and 3. Due to space constraints, other results (e-g. the distribution over
+token categories in gold spans and border tokens4 ),
+4
+
+Tokens near the beginning and end of a span.
+
+were omitted but can be accessed in our GitHub
+repository.
+
+103
+102
+101
+100
+0
+
+2
+
+4
+
+6
+
+8
+
+10
+
+12
+
+14
+
+Figure 2: Number of sentences in training gold spans.
+
+103
+
+50th percentile
+75th percentile
+95th percentile
+
+102
+
+101
+
+4.1
+
+100
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+120
+
+140
+
+160
+
+Figure 3: Number of tokens in training gold spans.
+
+4
+
+To provide additional means of fine-tuning the final architecture, we also decided to consider the SI
+model as a span classification task rather than a sequence labeling task (see Section 4.1). This meant
+that for each possible span, the SI model assigns a
+probability of being a propagandist argument, and
+therefore lets the TC model only classify spans that
+have this propaganda likelihood exceeding a wellchosen threshold. Intuition was that this would let
+us regulate the number of false positives we forward onto TC and make full use of the slackness
+offered by the added "Not Propaganda" class.
+In this architecture, it could be argued that the addition of this new 15th label renders the SI model
+unnecessary, but its use has strong computational
+advantages in allowing us to extensively prune the
+set of considered spans, and to counteract the very
+heavy class imbalance we would have if we were
+considering every possible spans in the TC task.
+
+System description
+
+Our approach was motivated by considering a realworld use of the TC model. As described in the
+SemEval-2020 task, TC models are supposed to
+classify a span as one of fourteen possible propaganda techniques, but this assumes that TC models
+are always fed with spans that necessarily contain
+a propagandist argument. However, in a real-world
+scenario no such guarantees could be made, unless
+using a well-chosen list of manually selected spans.
+Novel approach to architecture
+This conclusion resulted in two major changes compared to the architecture proposed in the SemEval2020 shared task, that can be seen in Figure 4,
+leading to an approach where the SI model is part
+of the preprocessing stage of TC:
+1. TC model should train on the results provided
+by the SI model, and not on a given set of
+gold spans already known to be propaganda.
+2. Because the SI model will make mistakes,
+the TC model should also be able to handle
+false positives and predict spans as "Not Propaganda", adding an extra 15th class.
+
+Span Identification (SI)
+
+Span identification is often seen as a sequence labeling task, using Begin (B), In (I) and Out (O)
+labels to classify each token as being in, out, or
+the beginning of a span. Despite the fact that many
+teams have used this common technique to model
+the problem, we decided to go another route and
+see it as a span classification task. This means that
+we enumerate all possible spans in the article, filtering them with heuristics (see Section 4.1.1), and we
+classify each of those as being a propaganda span
+or not. Our reasons for approaching this problem
+that way are the following:
+• To be able to use our SI model as intended in
+our general pipeline (see Section 4), we need a
+model that takes a span as input and classifies
+it as being propaganda or not, whereas a BIOtagging scheme would take a text as input and
+output the predicted propaganda spans.
+• Furthermore, as seen in Figure 2, a nonnegligible number of gold spans span multiple sentences. In some implementations from
+other teams, such as (Dimov et al., 2020), using the BIO-tagging scheme meant they were
+training a model that worked on each sentence
+individually, and they had to split gold spans
+spanning multiple sentences, negatively impacting their model’s performance.
+A detailed overview of the SI model can be seen
+in Appendix A.
+
+Figure 4: Overview of the architecture.
+
+4.1.1 SI Preprocessing
+
+4.1.3 SI Loss function
+
+To deal with the exponential number of spans in
+an article, we used heuristics to filter-out as many
+of them as possible. First of all, we only consider
+spans of 10 tokens or less. According to Figure
+3, we can still cover 75% of the gold spans in our
+training dataset, while only dealing with a computationally manageable amount of spans when
+enumerating all possibilities (see Section 7.1 for
+more information). Second of all, we discard spans
+that consist exclusively of a combination of determinants, punctuation, space or EOL tokens, as we
+can safely assume those will not be propaganda.
+
+We are using the binary cross-entropy (BCE) loss
+to train our model. The use of the BCE loss is standard in binary classification tasks, but especially
+relevant in our case. Indeed, since the outputs of
+the SI model will be used to prune spans given to
+the TC model, we are not only interested in the classification but in the actual confidence our model
+has in it, because we can change the confidence
+threshold for which we discard spans or not in TC.
+A specificity of our approach is also that it is
+affected by an important imbalance between the
+two classes. Only a small fraction of the spans that
+are retrieved by the preprocessing stage effectively
+contain a propagandist argument. To deal with this
+problem and prevent the model from classifying every span as not propaganda, we introduce a weight
+for the positive class in the loss function, defined
+as follows:
+
+4.1.2 SI Embeddings
+After being extracted, spans are embedded before
+being fed to the classifier. This embedding, also
+illustrated in Appendix A, has three parts:
+1. A weighted average of the word embeddings
+in the span. The weights used are from a
+general self-attention vector, masked and renormalized to only contain the span’s words.
+Expectations were that this would encode a
+general representation of our span.
+2. The contextualised representation of both of
+the span’s endpoints, concatenated. These vectors are obtained by using a PLM to embed the
+text, and then using a Seq2Seq encoder (in
+our implementation a LSTM) to contextualise
+those embeddings. Our intuition was that the
+first and last tokens in a span would be particularly important to detect propaganda, e.g.
+if the span begins and ends with a quotation
+mark, especially if those are contextualised in
+respect to the entire text.
+3. Finally, the span width is also encoded.
+Our results using different PLMs to embed
+words in our text can be seen in Section 5.1.
+
+weight+ =
+
+4.2
+
+# spans to classif y
+# propaganda spans
+
+Technique Classification (TC)
+
+The TC model has to label each element of a set
+S of spans with one of the 14 existing propaganda
+techniques. Note that this relies on the important
+assumption that the model is only provided with a
+set S of spans which contain a propagandist argument. Recall also that our overall architecture is
+designed to consider the real-world scenario where
+this assumption cannot be made (see Section 4).
+Our TC model was intended to be built on top of
+the results of the SI model. Consequently, we
+never have access to the ideal set S but rather a
+relaxed set S ′ of spans with the easier-to-satisfy assumption that S ⊂ S ′ . In order to correctly classify
+spans, we therefore had to add an extra label "Not
+Propaganda" for spans containing no propagandist
+argument (i.e. belonging to S ′ \S). An overview of
+our implementation can be seen at Appendix B.
+
+4.2.1 TC Preprocessing
+
+5
+
+The key insight is that we can now think of the SI
+model as applying an additional pruning procedure
+on the set of possible spans.
+For each article, we first apply the same preprocessing as we did for the SI model. Namely,
+we enumerate all spans following the same heuristics described in Section 4.1.1. We then use a pretrained SI model to get for each of those spans
+the probability of it containing a propagandist argument, and prune again according to those and a
+chosen threshold.
+Finally, before training the model, we had to
+label the set of span S provided by our SI model.
+For each of the spans s ∈ S we assigned their
+original label if the span s had a perfect match with
+the original TC training dataset, or our new "Not
+Propaganda" label otherwise.
+
+5.1 SI results
+
+4.2.2 TC Embedddings
+After being extracted and pruned according to the
+results provided by the pre-trained SI model, spans
+are embedded using the same techniques we employed for the SI span embedding stage (see Section 4.1.2).
+4.2.3 TC Loss function and metric
+We are using the standard cross-entropy (CE) loss
+to train our model. As in the SI analog, this loss
+may suffer because of the design of our overall
+architecture. Indeed, depending on the threshold
+we set as a hyperparameter to filter the spans according to the results of the SI model in the TC
+preprocessing, we still could have much more false
+positives than real propaganda spans. This could
+lead to an important class imbalance and skew our
+model’s predictions.
+To deal with this problem and prevent the
+model from classifying each of the new spans with
+the 15th label "Not Propaganda", we introduced
+weights in the loss function. Those weights were
+assigned in inverse proportion to the distribution
+of original classes in the dataset (shown in Figure 1) and the ratio r = 0.05 of spans provided
+by SI model that contains a propaganda argument
+(pointed out in Table 7). The 15th class proportion is 1 − r = 0.95 and the 14P
+original classes
+proportions are wsc where s = 1r c wc and wc is
+their original distribution. We finally reversed the
+proportions pi by assigning to each of the classes
+1 − pi in order to have the final weights.
+
+Experiments
+
+The metric used to evaluate our SI model is a
+custom F1 -measure that allows non-zero scores for
+partial matches between predicted and gold spans,
+as proposed in (Martino et al., 2020a). The rest of
+the experimental setup can be seen in Table 1.
+Hyperparameter
+Epochs
+Batch size
+Max span width
+Max sequence length
+LSTM dimension
+Learning rate (LR)
+Transformer LR
+
+Value
+10
+1
+10
+128
+200
+1e-3
+1e-5
+
+Table 1: Experimental setup for SI.
+
+As discussed in Section 7.1, our setup, and therefore our results, were heavily influenced by various
+limitations. Even though, SI achieved good results.
+RoBERTa obtains the highest F1 score on the test
+set, as reported in Table 3, letting us rank 8th out
+of 45 teams.
+Model
+BERT
+RoBERTa
+XLNet
+
+Custom F1
+0.40008
+0.42649
+0.37930
+
+Precision
+0.29371
+0.32754
+0.26213
+
+Recall
+0.62722
+0.61107
+0.68590
+
+Table 2: Model results on SI task on validation data.
+
+Model
+BERT
+RoBERTa
+XLNet
+
+Custom F1
+0.29651
+0.46072
+0.43133
+
+Precision
+0.17528
+0.40635
+0.50394
+
+Recall
+0.96147
+0.53189
+0.37701
+
+Table 3: Model results on SI task on test data.
+
+5.2 TC results
+Our approach for the TC model seems flawed. The
+assumption that SI returns a set of spans containing the gold spans was not respected, as discussed
+in Section 6.1, the problem being that a perfect
+match with a gold span is rarer than expected (see
+Table 7). Therefore, during training, when generating the labels for the spans provided by the SI
+model, we never have a perfect match and thus all
+our training samples were labelled as "Not propaganda" (because of our strategy to generate gold
+
+labels, as discussed in Section 4.2), preventing our
+algorithm from learning to distinguish between our
+classes. Indeed, the model outputed the "Not Propaganda" class for every span.
+In order to counteract this limitation, we tried to
+further relax our model and enrich our gold labels
+set with partially overlapping spans (as described
+in Table 6). For instance, if SI predicts a span
+s spanning from token 12 to token 26 and there
+is a gold span going from token 13 to token 27
+with label l, we assigned this propaganda label l to
+the span s provided by SI. We thus enriched our
+dataset with partially overlapping spans according
+to some threshold. However, this method was not
+successful either in practice, still leading to a model
+that predicted "Not Propaganda" for every span.
+Indeed, as shown in Table 7, even going as far as
+allowing for 50% of the span to be a false positive,
+we would only get 20% of labels being something
+other than "Not Propaganda" in our training set,
+which did not seem to be enough to overcome the
+issue.
+5.2.1
+
+Alternative TC results
+
+We finally decided to implement an alternative version of TC, not taking as input the set of spans
+provided by our SI model, but taking the spans
+directly from the dataset as initially proposed by
+the organizers i.e. a perfect pruned set of spans.
+Therefore, we also removed our 15th class "Not
+Propaganda". This alternative TC demonstrates
+that our two modules can nevertheless work independently and are capable of providing decent
+results on both sub-tasks. The metric used to evaluate the TC model is a standard micro-averaged
+F1 -measure, and the exact experimental setup is the
+same as for our other TC model, and can be seen
+in Table 4. Our results can be found in Table 5.
+Hyperparameter
+Epochs
+Batch size
+Max span width
+Max sequence length
+LSTM dimension
+Learning rate (LR)
+Transformer LR
+
+Value
+1
+1
+10
+128
+200
+1e-3
+1e-5
+
+Table 4: Experimental setup for TC.
+
+Notice that we were not able to generate results
+for the test data. Because the model took as input
+
+Model
+BERT
+RoBERTa
+XLNet
+
+F1
+0.00000
+0.57761
+0.37930
+
+Precision
+0.29371
+0.57761
+0.26213
+
+Recall
+0.62722
+0.57761
+0.00000
+
+Table 5: Model results on alternative TC task on
+validation data.
+
+the gold spans to be predicted by the SI model,
+the organizers of the task decided to not share it
+publicly. Even after contacting them, we were not
+able to get access to the correct file.
+
+6
+
+Error analysis
+
+In order to draw meaningful conclusions about the
+results produced by the proposed methods so far in
+both of the two sub tasks, a specific error analysis
+on them was performed.
+More in detail, all the analysis were performed
+on classification results of the top performing
+model in each task, namely RoBERTA-si and
+RoBERTa-tc, obtained on validation data - since
+no hyper-parameter tuning was performed using
+them (except for the choice of PLM) and therefore
+they could be used to obtain unbiased information.
+6.1
+
+Span Identification Task
+
+As a first approach to error analysis for SI task,
+we decided to further investigate the results by
+breaking them down by propaganda technique. Although, in this task, the model does not explicitly
+deal with technique classification, all propaganda
+spans still belong to a specific category, and analysis of how it influenced the prediction results was
+considered potentially insightful.
+Since the custom F1 metric used in SI allows
+non-zero scores for partial matches, the proportion
+between partially classified, totally identified and
+entirely missed propaganda spans in the validation
+articles were included in the analysis. The results
+of this investigation are reported in Table 6.
+As the data highlights, our system was unable to
+identify almost one third of propaganda spans in
+the given articles. On the other hand, roughly 60%
+of the spans were completely identified (i.e. with
+more than 75% of the characters being correct).
+The high disproportion between partial matches
+and complete matches, together with the higher
+recall value with respect to precision registered in
+both validation and test results, might suggest that
+our system tends to predict larger spans than the
+
+Repetition
+
+Flag Waving
+
+Exaggeration
+
+Doubt
+
+Prejudice
+
+Slogans
+
+Red Herring
+
+Appeal to Authority
+
+Reductio ad hitlerum
+
+Oversimplification
+
+Cliches
+
+Authority
+
+51
+23
+251
+325
+
+Name Calling
+
+Loaded Language
+Not identified
+Partially identified
+Totally identified
+Total
+
+35
+18
+130
+183
+
+56
+3
+86
+145
+
+18
+19
+50
+87
+
+28
+12
+28
+68
+
+42
+18
+6
+66
+
+9
+17
+18
+44
+
+10
+4
+26
+40
+
+17
+8
+4
+29
+
+7
+1
+6
+14
+
+4
+1
+0
+5
+
+13
+4
+1
+18
+
+9
+3
+5
+17
+
+7
+1
+6
+14
+
+Total
+306
+132
+617
+1055
+
+Table 6: SI results broken down by propaganda technique. In this setting, a gold span was considered totally
+identified if at least 75% of its characters were labeled as propaganda, partially identified if a percentage between
+15% and 75% of its characters were labeled as propaganda, not identified if less than 15% of its characters were
+labeled as propaganda.
+
+necessary.
+The changes between the proportion of identified and not identified spans according to more
+(e.g. Loaded Language and Name Calling) and
+less (e.g. Red Herring and Reductio ad hitlerium)
+frequent techniques was also investigated. This
+could suggest a direct relation between the number
+of instances for each propaganda technique and the
+accuracy achieved by the system in correctly classifying span that belongs to that technique. This
+relation is observable in Figure 5, which reports
+the distribution of identification proportion for different propaganda techniques.
+
+pletely characterize the quality of the predictions of
+the proposed SI model. Because of this, a more indepth analysis on the similarity between predicted
+propaganda spans and gold spans was conducted.
+To evaluate the similarity between predicted spans
+and gold spans the metric Intersection over Union
+(IoU) was used. IoU, also known as Jaccard index
+or Jaccard similarity coefficient, is a statistic used
+for gauging the similarity and diversity of sample
+sets. It is defined as the size of the intersection
+divided by the size of the union of the sample sets
+(i.e. text spans in our setting):
+
+IoU (S1 , S2 ) =
+
+2.5
+
+4
+Density distribution
+
+Density distribution
+
+2.0
+3
+2
+1
+0
+
+1.5
+1.0
+0.5
+
+0.0
+
+0.2
+
+0.4
+0.6
+0.8
+Percentage of span characters identified
+
+0.0
+
+1.0
+
+0.0
+
+3.0
+
+2.5
+
+2.5
+
+2.0
+
+2.0
+1.5
+1.0
+
+1.0
+
+1.5
+1.0
+0.5
+
+0.5
+0.0
+
+0.4
+0.6
+0.8
+Percentage of span characters identified
+
+(b) Red Herring
+
+Density distribution
+
+Density distribution
+
+(a) Causal Oversimplification
+
+0.2
+
+0.0
+
+0.2
+
+0.4
+0.6
+0.8
+Percentage of span characters identified
+
+(c) Loaded Language
+
+1.0
+
+0.0
+
+0.0
+
+0.2
+
+0.4
+0.6
+0.8
+Percentage of span characters identified
+
+1.0
+
+(d) Name Calling
+
+Figure 5: Distribution of identification percentage of
+gold spans which belong to four different propaganda
+technique. It can be observed how less frequent techniques in the training set (Figures 5a and 5b) are much
+harder to label compared to more frequent techniques
+(Figures 5c and 5d).
+
+However, data in Table 6 is not enough to com-
+
+|S1 ∩ S2 |
+|S1 ∪ S2 |
+
+The analysis was performed by aggregating all
+predicted spans which matched different thresholds
+of score, to gain better insights on the distribution
+of likelihood of our predictions with respect to gold
+labels. The results of this study are reported in Table 7. As we can see from the data, just a very small
+percentage of the predicted labels actually match
+perfectly a gold label, and in this behaviour lies
+one of the biggest weakness of our model. Here,
+in fact, it’s proved that one of the fundamental assumption of the proposed approach, that is that the
+gold spans are a subset of the predicted spans from
+SI, does not hold in practice.
+6.2
+
+Technique Classification Task
+
+As already mentioned in Section 5.2, the TC model
+implemented following the novel approach proposed in this project was not able to produce meaningful results for the Technique Classification sub
+
+Threshold
+Percentage
+
+1
+0.041
+
+≥ 0.5
+0.205
+
+≥ 0.25
+0.301
+
+>0
+0.397
+
+Table 7: Percentages of predicted spans which match
+different values of IoU score.
+Loaded 0.680
+
+0.050 0.135 0.075 0.007 0.025 0.000 0.004 0.004 0.014 0.004 0.004 0.000
+
+Labeling 0.064
+
+0.564 0.263 0.013 0.013 0.019 0.038 0.006 0.000 0.006 0.000 0.006 0.006
+
+Repetition 0.160
+
+0.080 0.560 0.040 0.040 0.040 0.000 0.040 0.000 0.040 0.000 0.000 0.000
+
+Exaggeration 0.385
+
+0.000 0.154 0.462 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+
+Doubt 0.059
+
+0.000 0.235 0.000 0.353 0.000 0.265 0.000 0.000 0.000 0.000 0.088 0.000
+
+Prejudice 0.200
+
+0.000 0.000 0.000 0.100 0.500 0.000 0.100 0.000 0.100 0.000 0.000 0.000
+
+Flag 0.000
+
+0.000 0.043 0.000 0.000 0.000 0.870 0.043 0.000 0.043 0.000 0.000 0.000
+
+Oversimplification 0.000
+
+0.083 0.167 0.000 0.000 0.000 0.083 0.667 0.000 0.000 0.000 0.000 0.000
+
+Whataboutism
+
+Fallacy
+
+Cliches
+
+Slogans
+
+Authority
+
+Flag
+
+Oversimplification
+
+Doubt
+
+0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+Prejudice
+
+0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+
+Whataboutism 0.000
+
+Repetition
+
+0.000 0.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 0.000
+
+Cliches 0.000
+
+Exaggeration
+
+0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000 0.000
+
+Fallacy 0.000
+
+Loaded
+
+0.000 0.000 0.000 0.000 0.000 0.000 1.000 0.000 0.000 0.000 0.000 0.000
+
+Labeling
+
+Slogans 0.000
+Authority 0.000
+
+Figure 6: Normalized confusion matrix obtained from
+results of alternative TC. Rows represent the correct
+labels and columns the predicted ones.
+
+task. Indeed, performing an error analysis on the
+results produced by this model would not be interesting.
+However, it was still possible to investigate the
+results obtained with the alternative TC classifier.
+Figure 6 reports the normalized confusion matrix
+obtained from the analysis of the model prediction
+on validation data. Interestingly, the model TODO.
+
+7
+7.1
+
+Discussion and summary
+Discussion
+
+In this work, a novel approach to tackle the
+detection and classification of propaganda spans
+in news article was investigated. The core idea
+behind it was to develop a tool that would have
+been able to better adapt to real-world scenarios.
+Nonetheless, during the development of this tool
+many flaws were found in the initial approach, that
+was proven in our experiments to be not effective
+as initially expected.
+The first problem faced during the development
+of SI regarded the memory complexity of the approach. As already mentioned, the decision to approach the task as a span classification problem
+lead to the evaluation of a potentially exponential
+
+number (in the size of the article) of sequences.
+This, other than the obvious problem with class imbalance between propaganda and non-propaganda
+spans, also resulted in a major memory issue with
+batch embedding computation. The memory issue
+prevented us from effectively training our models
+on GPUs - due to the limited memory available and performing a proper hyper-parameter tuning
+and validation of our models with techniques like
+cross-validation and statistical significance indices.
+The second problem, which is indeed also the
+more concerning for the initial idea, was the predicting efficiency of our SI model. In fact, in the
+proposed approach the efficiency of TC was completely relying on a good span extraction from SI.
+Since the experiments proved this assumption to be
+wrong, as already discussed in many section before,
+it was impossible to train under these constraint an
+efficient TC based on our initial approach.
+However the two proposed models, SI and alternative TC, achieves very good scores in both the
+tasks and, more in general, seems TOFINISH
+The error analysis investigated and revealed
+the propaganda techniques commonly confused in
+Technique Classification task and the techniques
+that our model was unable to detect effectively
+within the SI input articles. A possible route of
+improvement for the latter might be deploying data
+augmentation techniques to enrich the number of
+samples that belongs to less frequent techniques, in
+order to facilitate their identification.
+7.2
+
+Future work
+
+Because of the context of this project, and the time
+limit associated with it, we were not able to implement all of the ideas we had to improve our model.
+To build upon our work, we propose to look into
+the following:
+• hyper-parameters tuning for all the PLMs investigated
+• exploration of add-on features for the architecture such as conditional random field (CRF)
+or data augmentation techniques such as back
+translation, random replacement and random
+insertion in order to further enhance the results
+7.3
+
+Outro
+
+This paper, as well as the lectures note of the course,
+were checked using the proposed system, to detect fragments one may suspect to represent one
+
+or more propaganda techniques. The resu

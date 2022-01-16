@@ -1,0 +1,57 @@
+novel	Loaded_Language
+novel approach	Loaded_Language
+relaxed assumptions	Loaded_Language
+epoch - making	Loaded_Language
+epoch - making Transformer - based masked language model .	Loaded_Language
+fine - tuned	Name_Calling,Labeling
+state - of - the - art results .	Exaggeration,Minimisation
+a state - of - the - art	Name_Calling,Labeling
+state - of - the - art	Exaggeration,Minimisation
+state - of - the - art	Exaggeration,Minimisation
+state - of - the - art deep learning models	Name_Calling,Labeling
+robust	Loaded_Language
+propagandist argument ,	Name_Calling,Labeling
+propaganda likelihood	Repetition
+slackness	Loaded_Language
+very heavy	Loaded_Language
+very heavy class imbalance	Loaded_Language
+propagandist argument .	Name_Calling,Labeling
+manually selected spans .	Name_Calling,Labeling
+propaganda .	Repetition
+propaganda .	Repetition
+our approach	Loaded_Language
+propagandist argument .	Name_Calling,Labeling
+propaganda ,	Name_Calling,Labeling
+propagandist argument	Name_Calling,Labeling
+propagandist argument ,	Name_Calling,Labeling
+Not Propaganda "	Slogans
+propaganda spans .	Name_Calling,Labeling
+skew our model ’s predictions .	Loaded_Language
+propaganda argument	Name_Calling,Labeling
+seems flawed .	Loaded_Language
+flawed .	Loaded_Language
+Not propaganda "	Name_Calling,Labeling
+our strategy	Loaded_Language
+Not Propaganda " class	Name_Calling,Labeling
+limitation ,	Loaded_Language
+Not Propaganda "	Slogans
+Not Propaganda "	Name_Calling,Labeling
+our 15th class " Not Propaganda " .	Name_Calling,Labeling
+our 15th class " Not Propaganda " .	Name_Calling,Labeling
+Not Propaganda " .	Slogans
+totally identified	Loaded_Language
+totally identified and entirely missed propaganda spans	Exaggeration,Minimisation
+completely identified	Exaggeration,Minimisation
+Red Herring	Loaded_Language
+Red Herring Appeal to Authority	Loaded_Language
+totally identified	Exaggeration,Minimisation
+indepth analysis	Loaded_Language
+very small	Exaggeration,Minimisation
+one of the biggest weakness of our model .	Exaggeration,Minimisation
+our model .	Doubt
+Interestingly , the model .	Doubt
+propaganda spans	Name_Calling,Labeling
+potentially exponential number	Loaded_Language
+achieves very good scores	Loaded_Language
+very good scores	Loaded_Language
+our work ,	Doubt

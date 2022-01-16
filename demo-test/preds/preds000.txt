@@ -1,0 +1,120 @@
+highly inefficient	Loaded_Language
+comes in handy .	Loaded_Language
+redundancies .	Loaded_Language
+cumbersome	Loaded_Language
+the sleeker zn .	Name_Calling,Labeling
+inductive hypothesis )	Loaded_Language
+exponential	Loaded_Language
+redundant .	Loaded_Language
+the magic of backpropogation .	Loaded_Language
+the cheap gradient principle :	Name_Calling,Labeling
+cheap	Loaded_Language
+log - linear models	Repetition
+analytically tractable .	Loaded_Language
+log - linear ,	Name_Calling,Labeling
+completely BROKEN ! "	Loaded_Language
+broken ,	Loaded_Language
+spam classification example	Name_Calling,Labeling
+gradient descent .	Loaded_Language
+log - softmax ,	Name_Calling,Labeling
+exponential families .	Repetition
+our estimate ,	Loaded_Language
+very convenient	Loaded_Language
+The crux of the argument	Loaded_Language
+non - linear boundary ?	Name_Calling,Labeling
+log - linear models	Name_Calling,Labeling
+non - linear decision boundaries , by	Repetition
+log - linear models :	Name_Calling,Labeling
+vanishing gradients .	Loaded_Language
+one - hot encoding scheme .	Name_Calling,Labeling
+skip - gram model	Repetition
+naive computation	Loaded_Language
+structured prediction .	Repetition
+structured prediction task ,	Repetition
+bigram language model	Loaded_Language
+bigram assumption	Loaded_Language
+smoothing .	Loaded_Language
+neural n - gram models	Name_Calling,Labeling
+log - linear models	Name_Calling,Labeling
+illustrating example	Loaded_Language
+inherently limited	Loaded_Language
+explode	Loaded_Language
+I duck “	Repetition
+A duck “ ,	Name_Calling,Labeling
+shortest - path - search problem	Loaded_Language
+computationally intractable .	Loaded_Language
+our problem .	Flag-Waving
+additively decomposable	Loaded_Language
+additively decomposable ,	Loaded_Language
+an annihilator	Name_Calling,Labeling
+semirings	Loaded_Language
+overwhelming evidence	Loaded_Language
+structured hierarchically .	Loaded_Language
+hierarchical nature	Loaded_Language
+caviar	Loaded_Language
+a cleft sentence ,	Loaded_Language
+How does papa eat caviar ?	Doubt
+With a spoon ]	Loaded_Language
+red car ”	Repetition
+red car ”	Repetition
+red car ”	Name_Calling,Labeling
+single - root constraint .	Name_Calling,Labeling
+projective and non - projective .	Repetition
+no edges will cross each other .	Loaded_Language
+An Intractable Problem	Loaded_Language
+inefficient ,	Loaded_Language
+greedy decisions	Loaded_Language
+suboptimal .	Repetition
+greedy graph .	Name_Calling,Labeling
+our greedy solution ,	Name_Calling,Labeling
+greedy	Name_Calling,Labeling
+greedy	Name_Calling,Labeling
+greedy	Name_Calling,Labeling
+greedy	Repetition
+brute force approach	Loaded_Language
+greedy	Name_Calling,Labeling
+greedy graph	Loaded_Language
+greedy	Loaded_Language
+fancy tricks and efficient data structures	Loaded_Language
+greedy	Loaded_Language
+greedy	Repetition
+greedy	Repetition
+greedy	Repetition
+greedy	Repetition
+humans incrementally build meaning in sequential order ,	Loaded_Language
+Appealingly ,	Loaded_Language
+Colorless green dreams sleep furiously . ”	Loaded_Language
+Everybody loves someone else . "	Slogans
+The space of all strings is huge !	Loaded_Language
+Everyone loves someone else . "	Slogans
+undecidable .	Loaded_Language
+Alex likes Brit . ”	Name_Calling,Labeling
+Alex likes some teacher .	Name_Calling,Labeling
+linguistically expressive formalism :	Loaded_Language
+Expressive power	Loaded_Language
+inductively defined	Loaded_Language
+closes the loop ”	Loaded_Language
+Semiring - ify matrix multiplication .	Repetition
+Shortest - path matrix multiplication .	Loaded_Language
+brute - force computation	Loaded_Language
+slow sequential recurrence ,	Loaded_Language
+Beam Search works competitively well	Loaded_Language
+boiled down	Loaded_Language
+our problem ?	Flag-Waving
+Probabilistic models .	Name_Calling,Labeling
+Non - probabilistic models .	Name_Calling,Labeling
+Discriminative .	Loaded_Language
+Asymptotic efficiency .	Loaded_Language
+Interestingly ,	Doubt
+non - convex or even non - differentiable .	Loaded_Language
+Intrinsic Evaluation	Loaded_Language
+intrinsic .	Repetition
+incorrectly classified	Repetition
+incorrectly classified	Repetition
+null hypothesis .	Repetition
+powerful tool	Loaded_Language
+In a nutshell ,	Loaded_Language
+Empirical comparison	Loaded_Language
+Empirical Methods	Loaded_Language
+Empirical Methods	Loaded_Language
+Empirical Methods	Loaded_Language
