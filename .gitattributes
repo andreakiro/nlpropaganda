@@ -1,0 +1,9 @@
+# TEX related files
+*.tex linguist-vendored
+*.bib linguist-vendored
+*.bbx linguist-vendored
+*.bst linguist-vendored
+*.cbx linguist-vendored
+*.cls linguist-vendored
+*.dbx linguist-vendored
+*.sty linguist-vendored
